@@ -1,0 +1,8 @@
+﻿Test Case,Precondition,Input Email,Input Password,Expected Valid,Expected Message,Actual Valid,Actual Message,Kết quả
+TC01,Người dùng ở trang đăng nhập,khanhxuan@gmail.com,******,True,Hợp lệ,True,Hợp lệ,PASS
+TC02,Người dùng ở trang đăng nhập,(rỗng),******,False,Email là bắt buộc,False,Email là bắt buộc,PASS
+TC03,Người dùng ở trang đăng nhập,khanhxuan@gmail,******,False,Email không hợp lệ,False,Email không hợp lệ,PASS
+TC04,Người dùng ở trang đăng nhập,khanhxuan@gmail.com,(rỗng),False,Password là bắt buộc,False,Password là bắt buộc,PASS
+TC05,Người dùng ở trang đăng nhập,khanhxuan@gmail.com,***,False,Password phải từ 6 ký tự,False,Password phải từ 6 ký tự,PASS
+TC06,Người dùng ở trang đăng nhập, khanhxuan@gmail.com ,******,True,Hợp lệ,True,Hợp lệ,PASS
+TC07,Người dùng ở trang đăng nhập,(rỗng),(rỗng),False,Email là bắt buộc,False,Email là bắt buộc,PASS
