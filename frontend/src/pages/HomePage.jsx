@@ -7,6 +7,7 @@ import Notification from "../components/Notification";
 import StatsCard from "../components/StatsCard";
 import { getTodos, createTodo, updateTodo, deleteTodo } from "../services/todoService";
 import { parseTask } from "../services/aiService";
+import * as authService from "../services/authService";
 
 // HomePage chỉ làm 1 việc: ghép các component con thành trang chính, quản lý state task
 export default function HomePage() {
@@ -42,7 +43,24 @@ export default function HomePage() {
   };
 
   const handleAddNatural = async (text) => {
-    await parseTask(text);
+    const res = await parseTask(text);
+    const raw = res.data.result;
+
+    let title = raw;
+    let deadline;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.title && parsed.title.trim()) {
+        title = parsed.title;
+        if (parsed.deadline) {
+          deadline = parsed.deadline;
+        }
+      }
+    } catch {
+      // AI trả về text không phải JSON hợp lệ — giữ nguyên fallback: dùng cả chuỗi làm title
+    }
+
+    await createTodo(deadline ? { title, deadline } : { title });
     await loadTodos();
   };
 
@@ -57,7 +75,7 @@ export default function HomePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    authService.logout();
     navigate("/");
   };
 
