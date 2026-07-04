@@ -5,6 +5,7 @@ import AddTaskForm from "../components/AddTaskForm";
 import FilterBar from "../components/FilterBar";
 import Notification from "../components/Notification";
 import StatsCard from "../components/StatsCard";
+import ChatBox from "../components/ChatBox";
 import { getTodos, createTodo, updateTodo, deleteTodo } from "../services/todoService";
 import { parseTask } from "../services/aiService";
 import * as authService from "../services/authService";
@@ -116,6 +117,8 @@ export default function HomePage() {
         </div>
 
         <StatsCard />
+
+        <ChatBox />
 
         {!loading && !error && <Notification todos={todos} />}
 
