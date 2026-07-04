@@ -45,7 +45,8 @@ export default function LoginPage() {
         setSuccessMsg("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.");
       }
     } catch (err) {
-      setError(err.message || "Đã có lỗi xảy ra. Thử lại nhé.");
+      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
+      setError(msg);
     } finally {
       setLoading(false);
     }

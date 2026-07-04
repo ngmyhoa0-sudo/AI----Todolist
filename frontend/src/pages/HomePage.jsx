@@ -32,42 +32,44 @@ export default function HomePage() {
       const data = await getTodos();
       setTodos(data.data);
     } catch (err) {
-      setError(err.message || "Không tải được danh sách task.");
+      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAdd = async (title) => {
-    await createTodo({ title });
+  const handleAdd = async (title, deadline) => {
+    await createTodo(deadline ? { title, deadline } : { title });
     await loadTodos();
   };
 
   const handleAddNatural = async (text) => {
-    const res = await parseTask(text);
-    const raw = res.data.result;
-
-    let title = raw;
-    let deadline;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed.title && parsed.title.trim()) {
-        title = parsed.title;
-        const deadlineRaw = typeof parsed.deadline === "string" ? parsed.deadline.trim() : "";
-        if (deadlineRaw && deadlineRaw.toLowerCase() !== "null") {
-          deadline = deadlineRaw;
-        }
-      }
-    } catch {
-      // AI trả về text không phải JSON hợp lệ — giữ nguyên fallback: dùng cả chuỗi làm title
-    }
-
     setNaturalAddError("");
     try {
+      const res = await parseTask(text);
+      const raw = res.data.result;
+
+      let title = raw;
+      let deadline;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.title && parsed.title.trim()) {
+          title = parsed.title;
+          const deadlineRaw = typeof parsed.deadline === "string" ? parsed.deadline.trim() : "";
+          if (deadlineRaw && deadlineRaw.toLowerCase() !== "null") {
+            deadline = deadlineRaw;
+          }
+        }
+      } catch {
+        // AI trả về text không phải JSON hợp lệ — giữ nguyên fallback: dùng cả chuỗi làm title
+      }
+
       await createTodo(deadline ? { title, deadline } : { title });
       await loadTodos();
     } catch (err) {
-      setNaturalAddError(err.message || "Không thể thêm task từ ngôn ngữ tự nhiên. Thử lại nhé.");
+      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
+      setNaturalAddError(msg);
     }
   };
 
