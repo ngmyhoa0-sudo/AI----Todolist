@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class UserRegister(BaseModel):
     email: str
@@ -14,4 +14,6 @@ class ForgotPassword(BaseModel):
 class ResetPassword(BaseModel):
     email: str
     otp: str
-    new_password: str
+    new_password: str = Field(alias="newPassword")
+
+    model_config = {"populate_by_name": True}

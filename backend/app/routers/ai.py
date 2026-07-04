@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.schemas.chat import ChatCreate
+from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
 from app.dependencies import verify_token
 from google import genai
@@ -11,9 +11,9 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Thêm task bằng ngôn ngữ tự nhiên
 @router.post("/parse-task")
-def parse_task(chat: ChatCreate, user=Depends(verify_token)):
+def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
     prompt = f"""
-    Người dùng muốn thêm task: "{chat.message}"
+    Người dùng muốn thêm task: "{chat.text}"
     Hãy trích xuất thông tin và trả về JSON với format:
     {{"title": "tên task", "deadline": "YYYY-MM-DD hoặc null"}}
     Chỉ trả về JSON, không giải thích thêm.
