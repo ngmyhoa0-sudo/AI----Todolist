@@ -8,6 +8,10 @@ class ChatMessage(BaseModel):
 class ChatCreate(BaseModel):
     message: str
 
+class ChatHistoryCreate(BaseModel):
+    message: str
+    role: str = "user"
+
 class ParseTaskRequest(BaseModel):
     text: str
 
