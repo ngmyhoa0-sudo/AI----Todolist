@@ -2,11 +2,14 @@ from pydantic import BaseModel
 from datetime import datetime
 
 class ChatMessage(BaseModel):
-    role: str        # "user" hoặc "ai"
-    content: str     # nội dung tin nhắn
+    role: str
+    content: str
 
 class ChatCreate(BaseModel):
-    message: str     # tin nhắn người dùng gửi lên
+    message: str
+
+class ParseTaskRequest(BaseModel):
+    text: str
 
 class ChatResponse(BaseModel):
     id: int

@@ -10,5 +10,5 @@ async def verify_token(authorization: str = Header(...)):
     try:
         user = supabase.auth.get_user(token)
         return {"id": user.user.id, "email": user.user.email}
-    except:
+    except Exception:
         raise HTTPException(status_code=401, detail="Token hết hạn hoặc không hợp lệ")
