@@ -4,6 +4,7 @@ import { useState } from "react";
 export default function AddTaskForm({ onAdd, onAddNatural }) {
   const [mode, setMode] = useState("normal");
   const [text, setText] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -12,11 +13,16 @@ export default function AddTaskForm({ onAdd, onAddNatural }) {
     setLoading(true);
     try {
       if (mode === "normal") {
-        await onAdd(text);
+        if (deadline) {
+          await onAdd(text, deadline);
+        } else {
+          await onAdd(text);
+        }
       } else {
         await onAddNatural(text);
       }
       setText("");
+      setDeadline("");
     } finally {
       setLoading(false);
     }
@@ -56,6 +62,17 @@ export default function AddTaskForm({ onAdd, onAddNatural }) {
           {loading ? "Đang thêm..." : "Thêm"}
         </button>
       </div>
+      {mode === "normal" && (
+        <div style={styles.deadlineRow}>
+          <label style={styles.deadlineLabel}>Deadline (không bắt buộc)</label>
+          <input
+            style={styles.deadlineInput}
+            type="datetime-local"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+          />
+        </div>
+      )}
     </form>
   );
 }
@@ -77,5 +94,12 @@ const styles = {
     padding: "10px 18px", backgroundColor: "#111", color: "#fff",
     border: "none", borderRadius: "7px", fontSize: "14px",
     fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap",
+  },
+  deadlineRow: { display: "flex", flexDirection: "column", gap: "4px", marginTop: "8px" },
+  deadlineLabel: { fontSize: "12px", color: "#888" },
+  deadlineInput: {
+    padding: "8px 12px", border: "1px solid #e0e0e0",
+    borderRadius: "7px", fontSize: "13px", color: "#111",
+    outline: "none", backgroundColor: "#fafafa", alignSelf: "flex-start",
   },
 };

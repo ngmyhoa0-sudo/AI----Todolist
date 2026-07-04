@@ -18,7 +18,8 @@ export default function StatsCard() {
       const data = await getStats();
       setStats(data.data);
     } catch (err) {
-      setError(err.message || "Không tải được thống kê.");
+      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
+      setError(msg);
     } finally {
       setLoading(false);
     }

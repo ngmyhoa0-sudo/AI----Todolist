@@ -31,7 +31,8 @@ export default function ForgotPassword() {
       setSuccessMsg("Mã OTP đã được gửi đến email của bạn.");
       setStep("otp");
     } catch (err) {
-      setError(err.message || "Không thể gửi email. Thử lại nhé.");
+      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -53,7 +54,8 @@ export default function ForgotPassword() {
       setSuccessMsg("Đặt lại mật khẩu thành công! Đang chuyển về trang đăng nhập...");
       setTimeout(() => navigate("/"), 2000);
     } catch (err) {
-      setError(err.message || "Mã OTP không đúng hoặc đã hết hạn. Thử lại nhé.");
+      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
