@@ -1,7 +1,6 @@
-import json
 import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
 from app.dependencies import verify_token
@@ -26,30 +25,10 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
         contents=prompt
     )
 
-    # Gemini đôi khi bọc JSON trong ```json ... ``` nên cần bóc ra trước khi parse
+    # Gemini đôi khi bọc JSON trong ```json ... ``` nên cần bóc ra trước khi trả về cho FE parse
     raw_text = re.sub(r"^```(?:json)?|```$", "", res.text.strip(), flags=re.MULTILINE).strip()
 
-    try:
-        parsed = json.loads(raw_text)
-    except (json.JSONDecodeError, TypeError):
-        raise HTTPException(status_code=422, detail="Không hiểu được nội dung task, vui lòng thử lại.")
-
-    title = parsed.get("title")
-    if not title:
-        raise HTTPException(status_code=422, detail="Không nhận diện được tên task.")
-
-    deadline = parsed.get("deadline")
-    if deadline in (None, "null", ""):
-        deadline = None
-
-    res_insert = supabase.table("tasks").insert({
-        "title": title,
-        "deadline": deadline,
-        "user_id": user["id"],
-        "is_completed": False
-    }).execute()
-
-    return {"result": res_insert.data}
+    return {"result": raw_text}
 
 # Chatbot trả lời câu hỏi về task
 @router.post("/chat")
