@@ -17,6 +17,7 @@ export default function HomePage() {
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [naturalAddError, setNaturalAddError] = useState("");
 
   const isGuest = new URLSearchParams(window.location.search).get("guest") === "true";
 
@@ -52,16 +53,22 @@ export default function HomePage() {
       const parsed = JSON.parse(raw);
       if (parsed.title && parsed.title.trim()) {
         title = parsed.title;
-        if (parsed.deadline) {
-          deadline = parsed.deadline;
+        const deadlineRaw = typeof parsed.deadline === "string" ? parsed.deadline.trim() : "";
+        if (deadlineRaw && deadlineRaw.toLowerCase() !== "null") {
+          deadline = deadlineRaw;
         }
       }
     } catch {
       // AI trả về text không phải JSON hợp lệ — giữ nguyên fallback: dùng cả chuỗi làm title
     }
 
-    await createTodo(deadline ? { title, deadline } : { title });
-    await loadTodos();
+    setNaturalAddError("");
+    try {
+      await createTodo(deadline ? { title, deadline } : { title });
+      await loadTodos();
+    } catch (err) {
+      setNaturalAddError(err.message || "Không thể thêm task từ ngôn ngữ tự nhiên. Thử lại nhé.");
+    }
   };
 
   const handleToggle = async (id, isCompleted) => {
@@ -113,6 +120,7 @@ export default function HomePage() {
         {!loading && !error && <Notification todos={todos} />}
 
         <AddTaskForm onAdd={handleAdd} onAddNatural={handleAddNatural} />
+        {naturalAddError && <p style={styles.error}>{naturalAddError}</p>}
 
         <FilterBar current={filter} onChange={setFilter} />
 
