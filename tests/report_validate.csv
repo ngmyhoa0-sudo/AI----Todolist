@@ -1,0 +1,8 @@
+﻿Test Case,Precondition,Input Title,Input Priority,Input Deadline,Expected Valid,Expected Message,Actual Valid,Actual Message,Kết quả
+TC01,"Người dùng đã đăng nhập, đang ở trang tạo task mới",Học bài môn kiểm thử,high,2026-06-30,True,Hợp lệ,True,Hợp lệ,PASS
+TC02,"Người dùng đã đăng nhập, đang ở trang tạo task mới",(rỗng),medium,2026-06-30,False,Tiêu đề không được để trống,False,Tiêu đề không được để trống,PASS
+TC03,"Người dùng đã đăng nhập, đang ở trang tạo task mới",     ,medium,2026-06-30,False,Tiêu đề không được để trống,False,Tiêu đề không được để trống,PASS
+TC04,"Người dùng đã đăng nhập, đang ở trang tạo task mới",AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,low,2026-06-30,False,Tiêu đề không được vượt quá 100 ký tự,False,Tiêu đề không được vượt quá 100 ký tự,PASS
+TC05,"Người dùng đã đăng nhập, đang ở trang tạo task mới",Làm bài tập,urgent,2026-06-30,False,Mức độ ưu tiên không hợp lệ,False,Mức độ ưu tiên không hợp lệ,PASS
+TC06,"Người dùng đã đăng nhập, đang ở trang tạo task mới",Đọc sách,low,None,True,Hợp lệ,True,Hợp lệ,PASS
+TC07,"Người dùng đã đăng nhập, đang ở trang tạo task mới",Ôn thi,high,,False,Deadline không được để trống nếu có nhập,False,Deadline không được để trống nếu có nhập,PASS
