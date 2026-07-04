@@ -16,7 +16,13 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
       </span>
       {todo.deadline && (
         <span style={styles.deadline}>
-          {new Date(todo.deadline).toLocaleDateString("vi-VN")}
+          {new Date(todo.deadline).toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
       )}
       <button
