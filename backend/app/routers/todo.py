@@ -5,13 +5,13 @@ from ..dependencies import verify_token
 router = APIRouter(prefix="/todos", tags=["todos"])
 
 # Lấy danh sách task
-@router.get("/")
+@router.get("")
 def get_todos(user=Depends(verify_token)):
     res = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute()
     return res.data
 
 # Thêm task mới
-@router.post("/")
+@router.post("")
 def create_todo(todo: TodoCreate, user=Depends(verify_token)):
     res = supabase.table("tasks").insert({
         "title": todo.title,

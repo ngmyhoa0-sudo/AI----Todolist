@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.schemas.chat import ChatCreate
+from app.schemas.chat import ChatHistoryCreate
 from app.database import supabase
 from app.dependencies import verify_token
 
@@ -13,10 +13,10 @@ def get_chat_history(user=Depends(verify_token)):
 
 # Lưu tin nhắn vào database
 @router.post("/history")
-def save_message(chat: ChatCreate, role: str, user=Depends(verify_token)):
+def save_message(chat: ChatHistoryCreate, user=Depends(verify_token)):
     res = supabase.table("chat_history").insert({
         "user_id": user["id"],
-        "role": role,
+        "role": chat.role,
         "content": chat.message
     }).execute()
     return res.data
