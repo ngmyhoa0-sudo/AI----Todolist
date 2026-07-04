@@ -6,23 +6,29 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register")
 def register(body: UserRegister):
-    res = supabase.auth.sign_up({
-        "email": body.email,
-        "password": body.password
-    })
-    return {"message": "Đăng ký thành công, vui lòng kiểm tra email!"}
+    try:
+        supabase.auth.sign_up({
+            "email": body.email,
+            "password": body.password
+        })
+        return {"message": "Đăng ký thành công, vui lòng kiểm tra email!"}
+    except Exception:
+        raise HTTPException(status_code=400, detail="Đăng ký thất bại. Email đã tồn tại hoặc không hợp lệ.")
 
 @router.post("/login")
 def login(body: UserLogin):
-    res = supabase.auth.sign_in_with_password({
-        "email": body.email,
-        "password": body.password
-    })
-    return {
-        "access_token": res.session.access_token,
-        "user_id": res.user.id,
-        "email": res.user.email
-    }
+    try:
+        res = supabase.auth.sign_in_with_password({
+            "email": body.email,
+            "password": body.password
+        })
+        return {
+            "access_token": res.session.access_token,
+            "user_id": res.user.id,
+            "email": res.user.email
+        }
+    except Exception:
+        raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng.")
 
 @router.post("/logout")
 def logout():
