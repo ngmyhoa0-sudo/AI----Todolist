@@ -5,10 +5,12 @@ import AddTaskForm from "../components/AddTaskForm";
 import FilterBar from "../components/FilterBar";
 import Notification from "../components/Notification";
 import StatsCard from "../components/StatsCard";
+import StatsChart from "../components/StatsChart";
 import ChatBox from "../components/ChatBox";
 import { getTodos, createTodo, updateTodo, deleteTodo } from "../services/todoService";
 import { parseTask } from "../services/aiService";
 import * as authService from "../services/authService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 // HomePage chỉ làm 1 việc: ghép các component con thành trang chính, quản lý state task
 export default function HomePage() {
@@ -33,16 +35,19 @@ export default function HomePage() {
       const data = await getTodos();
       setTodos(data.data);
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
   const handleAdd = async (title, deadline) => {
-    await createTodo(deadline ? { title, deadline } : { title });
-    await loadTodos();
+    try {
+      await createTodo(deadline ? { title, deadline } : { title });
+      await loadTodos();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const handleAddNatural = async (text) => {
@@ -69,19 +74,26 @@ export default function HomePage() {
       await createTodo(deadline ? { title, deadline } : { title });
       await loadTodos();
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setNaturalAddError(msg);
+      setNaturalAddError(getErrorMessage(err));
     }
   };
 
   const handleToggle = async (id, isCompleted) => {
-    await updateTodo(id, { is_completed: !isCompleted });
-    await loadTodos();
+    try {
+      await updateTodo(id, { is_completed: !isCompleted });
+      await loadTodos();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const handleDelete = async (id) => {
-    await deleteTodo(id);
-    await loadTodos();
+    try {
+      await deleteTodo(id);
+      await loadTodos();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
   };
 
   const handleLogout = () => {
@@ -119,6 +131,7 @@ export default function HomePage() {
         </div>
 
         <StatsCard />
+        <StatsChart />
 
         <ChatBox />
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getStats } from "../services/statsService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 // StatsCard chỉ làm 1 việc: hiển thị số liệu tổng quan, tự gọi statsService
 export default function StatsCard() {
@@ -18,8 +19,7 @@ export default function StatsCard() {
       const data = await getStats();
       setStats(data.data);
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
