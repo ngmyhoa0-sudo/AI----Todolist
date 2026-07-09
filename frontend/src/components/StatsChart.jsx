@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getStats } from "../services/statsService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 // StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột thống kê task, tự gọi statsService
 export default function StatsChart() {
@@ -27,8 +28,7 @@ export default function StatsChart() {
       const data = await getStats();
       setStats(data.data);
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
