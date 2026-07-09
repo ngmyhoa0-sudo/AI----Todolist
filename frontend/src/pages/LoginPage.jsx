@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 // LoginPage chỉ làm 1 việc: hiển thị form đăng nhập / đăng ký
 export default function LoginPage() {
@@ -45,8 +46,7 @@ export default function LoginPage() {
         setSuccessMsg("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.");
       }
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

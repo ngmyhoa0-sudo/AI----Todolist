@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 // ForgotPassword chỉ làm 1 việc: hiển thị form reset mật khẩu 2 bước
 export default function ForgotPassword() {
@@ -31,8 +32,7 @@ export default function ForgotPassword() {
       setSuccessMsg("Mã OTP đã được gửi đến email của bạn.");
       setStep("otp");
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -54,8 +54,7 @@ export default function ForgotPassword() {
       setSuccessMsg("Đặt lại mật khẩu thành công! Đang chuyển về trang đăng nhập...");
       setTimeout(() => navigate("/"), 2000);
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || "Đã có lỗi xảy ra.";
-      setError(msg);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
