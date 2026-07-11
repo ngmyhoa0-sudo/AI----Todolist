@@ -20,3 +20,10 @@ export const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
 };
+export const guestLogin = async () => {
+    const response = await api.post("/auth/guest");
+    if (response.data?.access_token) {
+        localStorage.setItem("token", response.data.access_token);
+    }
+    return response;
+};

@@ -52,3 +52,13 @@ def reset_password(body: ResetPassword):
         return {"message": "Đặt lại mật khẩu thành công!"}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Mã OTP không đúng hoặc đã hết hạn")
+@router.post("/guest")
+def guest_login():
+    try:
+        res = supabase.auth.sign_in_anonymously()
+        return {
+            "access_token": res.session.access_token,
+            "user_id": res.user.id,
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Không thể tạo phiên khách. Vui lòng thử lại.")
