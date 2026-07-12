@@ -1,15 +1,16 @@
 import re
+import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
 from app.dependencies import verify_token
-from google import genai
-import os
+from groq import Groq
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+MODEL = "llama-3.3-70b-versatile"
 
 # Thêm task bằng ngôn ngữ tự nhiên
 @router.post("/parse-task")
@@ -20,13 +21,16 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
     {{"title": "tên task", "deadline": "YYYY-MM-DD hoặc null"}}
     Chỉ trả về JSON, không giải thích thêm.
     """
-    res = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt
-    )
+    try:
+        res = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
 
-    # Gemini đôi khi bọc JSON trong ```json ... ``` nên cần bóc ra trước khi trả về cho FE parse
-    raw_text = re.sub(r"^```(?:json)?|```$", "", res.text.strip(), flags=re.MULTILINE).strip()
+    raw_text = res.choices[0].message.content.strip()
+    raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
 
     return {"result": raw_text}
 
@@ -41,16 +45,18 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     Hãy trả lời ngắn gọn, hữu ích bằng tiếng Việt.
     """
     try:
-        res = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt
+        res = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
 
+    reply_text = res.choices[0].message.content
+
     supabase.table("chat_history").insert([
         {"user_id": user["id"], "role": "user", "content": chat.message},
-        {"user_id": user["id"], "role": "ai", "content": res.text}
+        {"user_id": user["id"], "role": "ai", "content": reply_text}
     ]).execute()
 
-    return {"reply": res.text}
+    return {"reply": reply_text}
