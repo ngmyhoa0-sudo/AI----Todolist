@@ -1,3 +1,4 @@
+import { getChatHistory } from "../services/chatHistoryService";
 import { useState, useRef, useEffect } from "react";
 import { askAI } from "../services/aiService";
 
@@ -8,7 +9,20 @@ export default function ChatBox() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const bottomRef = useRef(null);
+    const bottomRef = useRef(null);
+
+    // Nạp lại lịch sử chat đã lưu mỗi khi component được mount (ví dụ sau khi F5)
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                const res = await getChatHistory();
+                setMessages(res.data.map((m) => ({ role: m.role, content: m.content })));
+            } catch (err) {
+                // Không tải được lịch sử thì bỏ qua, giữ khung chat trống như bình thường
+            }
+        };
+        loadHistory();
+    }, []);
 
   // Auto scroll xuống tin nhắn mới nhất mỗi khi có tin nhắn mới hoặc đang chờ AI trả lời
   useEffect(() => {
