@@ -3,29 +3,20 @@ import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
 import { getErrorMessage } from "../utils/errorMessage";
 
-// LoginPage chỉ làm 1 việc: hiển thị form đăng nhập / đăng ký
 export default function LoginPage() {
     const navigate = useNavigate();
-
-    // "login" hoặc "register" — chuyển đổi giữa 2 form
     const [mode, setMode] = useState("login");
-
-    // Dữ liệu form
     const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
-
-    // Trạng thái UI
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
 
-    // Cập nhật field trong form
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
         setError("");
         setSuccessMsg("");
     };
 
-    // Xử lý submit
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
@@ -52,7 +43,6 @@ export default function LoginPage() {
         }
     };
 
-    // Xử lý đăng nhập khách (tạo phiên ẩn danh thật trên Supabase)
     const handleGuestLogin = async () => {
         setError("");
         setLoading(true);
@@ -67,104 +57,108 @@ export default function LoginPage() {
     };
 
     return (
-          <span style={styles.logo}>✓</span>
-          <h1 style={styles.appName}>AI Todolist</h1>
-          <p style={styles.tagline}>Quản lý công việc thông minh hơn</p>
-        </div >
+        <div style={styles.page}>
+            <div style={styles.card}>
+                <div style={styles.header}>
+                    <span style={styles.logo}>✓</span>
+                    <h1 style={styles.appName}>AI Todolist</h1>
+                    <p style={styles.tagline}>Quản lý công việc thông minh hơn</p>
+                </div>
 
-        {/* Tab chuyển đổi Đăng nhập / Đăng ký */ }
-        < div style = { styles.tabRow } >
-          <button
-            style={{ ...styles.tab, ...(mode === "login" ? styles.tabActive : {}) }}
-            onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); }}
-          >
-            Đăng nhập
-          </button>
-          <button
-            style={{ ...styles.tab, ...(mode === "register" ? styles.tabActive : {}) }}
-            onClick={() => { setMode("register"); setError(""); setSuccessMsg(""); }}
-          >
-            Đăng ký
-            value={form.email}
-            onChange={handleChange}
-            required
-            autoComplete="email"
-          />
+                <div style={styles.tabRow}>
+                    <button
+                        style={{ ...styles.tab, ...(mode === "login" ? styles.tabActive : {}) }}
+                        onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); }}
+                    >
+                        Đăng nhập
+                    </button>
+                    <button
+                        style={{ ...styles.tab, ...(mode === "register" ? styles.tabActive : {}) }}
+                        onClick={() => { setMode("register"); setError(""); setSuccessMsg(""); }}
+                    >
+                        Đăng ký
+                    </button>
+                </div>
 
-          <label style={styles.label}>Mật khẩu</label>
-          <input
-            style={styles.input}
-            type="password"
-            name="password"
-            placeholder="••••••••"
-            value={form.password}
-            onChange={handleChange}
-            required
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-          />
+                <form onSubmit={handleSubmit} style={styles.form}>
+                    <label style={styles.label}>Email</label>
+                    <input
+                        style={styles.input}
+                        type="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        value={form.email}
+                        onChange={handleChange}
+                        required
+                        autoComplete="email"
+                    />
 
-          {/* Chỉ hiện khi đăng ký */}
-          {mode === "register" && (
-            <>
-              <label style={styles.label}>Xác nhận mật khẩu</label>
-              <input
-                style={styles.input}
-                type="password"
-                name="confirmPassword"
-                placeholder="••••••••"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-              />
-            </>
-          )}
+                    <label style={styles.label}>Mật khẩu</label>
+                    <input
+                        style={styles.input}
+                        type="password"
+                        name="password"
+                        placeholder="••••••••"
+                        value={form.password}
+                        onChange={handleChange}
+                        required
+                        autoComplete={mode === "login" ? "current-password" : "new-password"}
+                    />
 
-          {/* Quên mật khẩu — chỉ hiện ở mode login */}
-          {mode === "login" && (
-            <div style={styles.forgotRow}>
-              <button
-                type="button"
-                style={styles.forgotBtn}
-                onClick={() => navigate("/forgot-password")}
-              >
-                Quên mật khẩu?
-              </button>
+                    {mode === "register" && (
+                        <>
+                            <label style={styles.label}>Xác nhận mật khẩu</label>
+                            <input
+                                style={styles.input}
+                                type="password"
+                                name="confirmPassword"
+                                placeholder="••••••••"
+                                value={form.confirmPassword}
+                                onChange={handleChange}
+                                required
+                                autoComplete="new-password"
+                            />
+                        </>
+                    )}
+
+                    {mode === "login" && (
+                        <div style={styles.forgotRow}>
+                            <button
+                                type="button"
+                                style={styles.forgotBtn}
+                                onClick={() => navigate("/forgot-password")}
+                            >
+                                Quên mật khẩu?
+                            </button>
+                        </div>
+                    )}
+
+                    {error && <p style={styles.error}>{error}</p>}
+                    {successMsg && <p style={styles.success}>{successMsg}</p>}
+
+                    <button type="submit" style={styles.submitBtn} disabled={loading}>
+                        {loading
+                            ? "Đang xử lý..."
+                            : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
+                    </button>
+                </form>
+
+                <div style={styles.guestRow}>
+                    <span style={styles.guestText}>Không muốn đăng ký? </span>
+                    <button
+                        type="button"
+                        style={styles.guestBtn}
+                        onClick={handleGuestLogin}
+                        disabled={loading}
+                    >
+                        Dùng thử với tư cách khách
+                    </button>
+                </div>
             </div>
-          )}
-
-          {/* Thông báo lỗi */}
-          {error && <p style={styles.error}>{error}</p>}
-
-          {/* Thông báo thành công */}
-          {successMsg && <p style={styles.success}>{successMsg}</p>}
-
-          {/* Nút submit */}
-          <button type="submit" style={styles.submitBtn} disabled={loading}>
-            {loading
-              ? "Đang xử lý..."
-              : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
-          </button>
-        </form>
-
-    {/* Chế độ khách */ }
-    <div style={styles.guestRow}>
-        <span style={styles.guestText}>Không muốn đăng ký? </span>
-        <button
-            type="button"
-            style={styles.guestBtn}
-            onClick={handleGuestLogin}
-            disabled={loading}
-        >
-            Dùng thử với tư cách khách
-        </button>
-
-    </div>
-    </div >
-  );
+        </div>
+    );
 }
 
-// ── Styles inline (minimalist) ──────────────────────────────────────────────
 const styles = {
     page: {
         minHeight: "100vh",
@@ -195,7 +189,15 @@ const styles = {
         borderRadius: "8px",
         width: "44px",
         height: "44px",
-        lineHeight: "44
+        lineHeight: "44px",
+        marginBottom: "12px",
+    },
+    appName: {
+        fontSize: "20px",
+        fontWeight: "700",
+        color: "#111",
+        margin: "0 0 4px 0",
+        letterSpacing: "-0.3px",
     },
     tagline: {
         fontSize: "13px",
@@ -217,7 +219,12 @@ const styles = {
         cursor: "pointer",
         fontWeight: "500",
         borderBottom: "2px solid transparent",
-        marginBottom: "
+        marginBottom: "-1px",
+        transition: "color 0.15s, border-color 0.15s",
+    },
+    tabActive: {
+        color: "#111",
+        borderBottomColor: "#111",
     },
     form: {
         display: "flex",
@@ -246,8 +253,12 @@ const styles = {
         marginTop: "8px",
     },
     forgotBtn: {
-        background: "no
-    padding: 0,
+        background: "none",
+        border: "none",
+        fontSize: "13px",
+        color: "#888",
+        cursor: "pointer",
+        padding: 0,
         textDecoration: "underline",
     },
     error: {
@@ -268,8 +279,14 @@ const styles = {
         padding: "10px 12px",
         backgroundColor: "#f0faf4",
         borderRadius: "6px",
-        border: "1px so
-    border: "none",
+        border: "1px solid #b2dfcc",
+    },
+    submitBtn: {
+        marginTop: "20px",
+        padding: "11px",
+        backgroundColor: "#111",
+        color: "#fff",
+        border: "none",
         borderRadius: "7px",
         fontSize: "14px",
         fontWeight: "600",
