@@ -2,7 +2,7 @@ import re
 import os
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
@@ -37,11 +37,14 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
     return {"result": raw_text}
 
 # Chatbot: vừa trả lời câu hỏi, vừa tự thêm task nếu người dùng có ý định đó
+
+    
 @router.post("/chat")
 def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     tasks = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute().data
 
     today_str = datetime.now().strftime("%Y-%m-%d")
+    tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
     prompt = f"""
     [persona]
@@ -49,17 +52,21 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     [context]
     Hôm nay là ngày: {today_str}
+    Ngày mai là ngày: {tomorrow_str}
     Danh sách task hiện tại của người dùng: {tasks}
     Người dùng vừa nhắn: "{chat.message}"
 
     [task]
     Xác định người dùng đang muốn (a) THÊM một task mới, hay (b) chỉ hỏi đáp/trò chuyện thông thường.
-    - Nếu là (a): trích xuất tên task và deadline (tính từ ngày hôm nay nếu người dùng nói tương đối như "ngày mai", "thứ 6 tới").
+    - Nếu là (a): trích xuất tên task và deadline. Tính deadline dựa CHÍNH XÁC vào ngày hôm nay và ngày mai đã cho ở trên (ví dụ "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}), không tự đoán ngày khác.
     - Nếu là (b): trả lời câu hỏi dựa trên danh sách task hiện có.
 
     [examples]
     Người dùng: "thêm task học tiếng Anh ngày mai"
-    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{today_str}", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
+    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str}", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
+
+    Người dùng: "tôi cần làm bài tập hạn hôm nay"
+    → {{"action": "add_task", "title": "Làm bài tập", "deadline": "{today_str}", "reply": "Đã thêm task \\"Làm bài tập\\", hạn hôm nay nhé!"}}
 
     Người dùng: "tôi còn bao nhiêu task chưa xong"
     → {{"action": "chat", "reply": "Bạn còn 2 task chưa hoàn thành: ..."}}
@@ -110,4 +117,4 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     except Exception:
         pass  # Không lưu được lịch sử thì bỏ qua, không chặn việc trả lời AI
 
-    return {"reply": reply_text}
+    return {"reply": reply_text}    
