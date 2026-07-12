@@ -53,34 +53,42 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     [context]
     Hôm nay là ngày: {today_str}
     Ngày mai là ngày: {tomorrow_str}
-    Danh sách task hiện tại của người dùng: {tasks}
+    Danh sách task hiện tại của người dùng (mỗi task có "id" riêng): {tasks}
     Người dùng vừa nhắn: "{chat.message}"
 
     [task]
-    Xác định người dùng đang muốn (a) THÊM một task mới, hay (b) chỉ hỏi đáp/trò chuyện thông thường.
-    - Nếu là (a): trích xuất tên task và deadline gồm CẢ NGÀY LẪN GIỜ.
-      + Ngày: tính CHÍNH XÁC theo "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}.
-      + Giờ: nếu người dùng nói buổi chung chung không kèm số giờ, dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
-      + Nếu người dùng nói rõ số giờ kèm buổi (ví dụ "2 giờ chiều", "3h chiều"), đổi đúng sang giờ 24h (2 giờ chiều = 14:00, 3 giờ chiều = 15:00).
-      + Nếu không nói gì về giờ/buổi, để giờ mặc định 08:00.
-    - Nếu là (b): trả lời câu hỏi dựa trên danh sách task hiện có.
+    Xác định người dùng đang muốn 1 trong 4 việc sau:
+    (a) THÊM task mới
+    (b) SỬA task đã có (đổi tên hoặc đổi deadline)
+    (c) XOÁ task đã có
+    (d) Chỉ hỏi đáp/trò chuyện thông thường
+
+    Quy tắc tính deadline (áp dụng cho (a) và (b)):
+    - Ngày: tính CHÍNH XÁC theo "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}.
+    - Giờ: nếu nói buổi chung chung không kèm số giờ, dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
+    - Nếu nói rõ số giờ kèm buổi (ví dụ "2 giờ chiều"), đổi đúng sang giờ 24h (2 giờ chiều = 14:00).
+    - Nếu không nói gì về giờ, để mặc định 08:00.
+
+    Quy tắc cho (b) và (c): PHẢI tìm đúng task trong danh sách ở trên dựa vào tên gần giống nhất, rồi lấy đúng trường "id" của nó để đưa vào "task_id". TUYỆT ĐỐI không tự bịa số id. Nếu không tìm thấy task nào khớp, trả về action "chat" và giải thích cho người dùng là không tìm thấy task đó.
 
     [examples]
     Người dùng: "thêm task học tiếng Anh ngày mai"
     → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str} 08:00", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
 
-    Người dùng: "tôi có cuộc họp vào chiều nay"
-    → {{"action": "add_task", "title": "Cuộc họp", "deadline": "{today_str} 15:00", "reply": "Đã thêm task \\"Cuộc họp\\", hạn chiều nay nhé!"}}
+    Người dùng: "sửa cuộc họp thành 3 giờ chiều mai" (giả sử tìm thấy task "Cuộc họp" có id là 7 trong danh sách)
+    → {{"action": "update_task", "task_id": 7, "deadline": "{tomorrow_str} 15:00", "reply": "Đã sửa deadline \\"Cuộc họp\\" sang 3 giờ chiều mai nhé!"}}
 
-    Người dùng: "chiều mai 2h cũng có họp"
-    → {{"action": "add_task", "title": "Cuộc họp", "deadline": "{tomorrow_str} 14:00", "reply": "Đã thêm task \\"Cuộc họp\\", hạn 2 giờ chiều mai nhé!"}}
+    Người dùng: "xoá task cuộc họp đi"  (giả sử tìm thấy task "Cuộc họp" có id là 7 trong danh sách)
+    → {{"action": "delete_task", "task_id": 7, "reply": "Đã xoá task \\"Cuộc họp\\" nhé!"}}
 
     Người dùng: "tôi còn bao nhiêu task chưa xong"
     → {{"action": "chat", "reply": "Bạn còn 2 task chưa hoàn thành: ..."}}
 
     [format]
-    Chỉ trả về DUY NHẤT 1 dòng JSON hợp lệ theo đúng 1 trong 2 cấu trúc:
-    - Thêm task: {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD HH:MM hoặc null", "reply": "..."}}
+    Chỉ trả về DUY NHẤT 1 dòng JSON hợp lệ theo đúng 1 trong 4 cấu trúc:
+    - Thêm: {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD HH:MM hoặc null", "reply": "..."}}
+    - Sửa: {{"action": "update_task", "task_id": <số>, "title": "... hoặc null nếu không đổi tên", "deadline": "YYYY-MM-DD HH:MM hoặc null nếu không đổi deadline", "reply": "..."}}
+    - Xoá: {{"action": "delete_task", "task_id": <số>, "reply": "..."}}
     - Trò chuyện: {{"action": "chat", "reply": "..."}}
     Không thêm chữ giải thích, không bọc trong dấu ```.
 
@@ -103,8 +111,9 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     try:
         parsed = json.loads(raw_text)
         reply_text = parsed.get("reply", raw_text)
+        action = parsed.get("action")
 
-        if parsed.get("action") == "add_task" and parsed.get("title"):
+        if action == "add_task" and parsed.get("title"):
             deadline = parsed.get("deadline")
             if isinstance(deadline, str) and deadline.strip().lower() == "null":
                 deadline = None
@@ -115,6 +124,25 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
                 "is_completed": False
             }).execute()
             task_added = True
+
+        elif action == "update_task" and parsed.get("task_id"):
+            update_data = {}
+            title = parsed.get("title")
+            if isinstance(title, str) and title.strip().lower() != "null" and title.strip():
+                update_data["title"] = title
+            deadline = parsed.get("deadline")
+            if isinstance(deadline, str) and deadline.strip().lower() != "null" and deadline.strip():
+                update_data["deadline"] = deadline
+            if update_data:
+                supabase.table("tasks").update(update_data) \
+                    .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
+                task_added = True
+
+        elif action == "delete_task" and parsed.get("task_id"):
+            supabase.table("tasks").delete() \
+                .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
+            task_added = True
+
     except (json.JSONDecodeError, TypeError, AttributeError):
         pass  # AI không trả về JSON hợp lệ thì giữ nguyên raw_text làm câu trả lời
 
@@ -126,4 +154,4 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     except Exception:
         pass  # Không lưu được lịch sử thì bỏ qua, không chặn việc trả lời AI
 
-    return {"reply": reply_text, "task_added": task_added} 
+    return {"reply": reply_text, "task_added": task_added}
