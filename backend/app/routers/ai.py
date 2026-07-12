@@ -40,10 +40,13 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     Câu hỏi: "{chat.message}"
     Hãy trả lời ngắn gọn, hữu ích bằng tiếng Việt.
     """
-    res = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt
-    )
+    try:
+        res = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
 
     supabase.table("chat_history").insert([
         {"user_id": user["id"], "role": "user", "content": chat.message},
