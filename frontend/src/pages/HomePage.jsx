@@ -28,18 +28,21 @@ export default function HomePage() {
     loadTodos();
   }, []);
 
-  const loadTodos = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await getTodos();
-      setTodos(data.data);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+    const [refreshCount, setRefreshCount] = useState(0);
+
+    const loadTodos = async () => {
+        setLoading(true);
+        setError("");
+        try {
+            const data = await getTodos();
+            setTodos(data.data);
+            setRefreshCount((c) => c + 1);
+        } catch (err) {
+            setError(getErrorMessage(err));
+        } finally {
+            setLoading(false);
+        }
+    };
 
   const handleAdd = async (title, deadline) => {
     try {
@@ -130,8 +133,8 @@ export default function HomePage() {
           </button>
         </div>
 
-        <StatsCard />
-        <StatsChart />
+         <StatsCard key={refreshCount} />
+         <StatsChart key={refreshCount} />
 
         <ChatBox onTaskAdded={loadTodos} />
 
