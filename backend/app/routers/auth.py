@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.auth import UserRegister, UserLogin, ForgotPassword, ResetPassword
+from app.schemas.auth import UserRegister, UserLogin, ForgotPassword, ResetPassword, RefreshTokenRequest
 from app.database import supabase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -24,6 +24,7 @@ def login(body: UserLogin):
         })
         return {
             "access_token": res.session.access_token,
+            "refresh_token": res.session.refresh_token,
             "user_id": res.user.id,
             "email": res.user.email
         }
@@ -52,13 +53,26 @@ def reset_password(body: ResetPassword):
         return {"message": "Đặt lại mật khẩu thành công!"}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Mã OTP không đúng hoặc đã hết hạn")
+
 @router.post("/guest")
 def guest_login():
     try:
         res = supabase.auth.sign_in_anonymously()
         return {
             "access_token": res.session.access_token,
+            "refresh_token": res.session.refresh_token,
             "user_id": res.user.id,
         }
     except Exception:
         raise HTTPException(status_code=500, detail="Không thể tạo phiên khách. Vui lòng thử lại.")
+
+@router.post("/refresh")
+def refresh_token(body: RefreshTokenRequest):
+    try:
+        res = supabase.auth.refresh_session(body.refresh_token)
+        return {
+            "access_token": res.session.access_token,
+            "refresh_token": res.session.refresh_token,
+        }
+    except Exception:
+        raise HTTPException(status_code=401, detail="Không thể làm mới phiên đăng nhập. Vui lòng đăng nhập lại.")

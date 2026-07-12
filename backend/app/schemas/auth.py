@@ -17,3 +17,6 @@ class ResetPassword(BaseModel):
     new_password: str = Field(alias="newPassword")
 
     model_config = {"populate_by_name": True}
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
