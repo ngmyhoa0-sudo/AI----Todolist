@@ -58,22 +58,29 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     [task]
     Xác định người dùng đang muốn (a) THÊM một task mới, hay (b) chỉ hỏi đáp/trò chuyện thông thường.
-    - Nếu là (a): trích xuất tên task và deadline. Tính deadline dựa CHÍNH XÁC vào ngày hôm nay và ngày mai đã cho ở trên (ví dụ "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}), không tự đoán ngày khác.
+    - Nếu là (a): trích xuất tên task và deadline gồm CẢ NGÀY LẪN GIỜ.
+      + Ngày: tính CHÍNH XÁC theo "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}.
+      + Giờ: nếu người dùng nói buổi chung chung không kèm số giờ, dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
+      + Nếu người dùng nói rõ số giờ kèm buổi (ví dụ "2 giờ chiều", "3h chiều"), đổi đúng sang giờ 24h (2 giờ chiều = 14:00, 3 giờ chiều = 15:00).
+      + Nếu không nói gì về giờ/buổi, để giờ mặc định 08:00.
     - Nếu là (b): trả lời câu hỏi dựa trên danh sách task hiện có.
 
     [examples]
     Người dùng: "thêm task học tiếng Anh ngày mai"
-    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str}", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
+    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str} 08:00", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
 
-    Người dùng: "tôi cần làm bài tập hạn hôm nay"
-    → {{"action": "add_task", "title": "Làm bài tập", "deadline": "{today_str}", "reply": "Đã thêm task \\"Làm bài tập\\", hạn hôm nay nhé!"}}
+    Người dùng: "tôi có cuộc họp vào chiều nay"
+    → {{"action": "add_task", "title": "Cuộc họp", "deadline": "{today_str} 15:00", "reply": "Đã thêm task \\"Cuộc họp\\", hạn chiều nay nhé!"}}
+
+    Người dùng: "chiều mai 2h cũng có họp"
+    → {{"action": "add_task", "title": "Cuộc họp", "deadline": "{tomorrow_str} 14:00", "reply": "Đã thêm task \\"Cuộc họp\\", hạn 2 giờ chiều mai nhé!"}}
 
     Người dùng: "tôi còn bao nhiêu task chưa xong"
     → {{"action": "chat", "reply": "Bạn còn 2 task chưa hoàn thành: ..."}}
 
     [format]
     Chỉ trả về DUY NHẤT 1 dòng JSON hợp lệ theo đúng 1 trong 2 cấu trúc:
-    - Thêm task: {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD hoặc null", "reply": "..."}}
+    - Thêm task: {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD HH:MM hoặc null", "reply": "..."}}
     - Trò chuyện: {{"action": "chat", "reply": "..."}}
     Không thêm chữ giải thích, không bọc trong dấu ```.
 
@@ -92,6 +99,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
 
     reply_text = raw_text
+    task_added = False
     try:
         parsed = json.loads(raw_text)
         reply_text = parsed.get("reply", raw_text)
@@ -106,6 +114,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
                 "user_id": user["id"],
                 "is_completed": False
             }).execute()
+            task_added = True
     except (json.JSONDecodeError, TypeError, AttributeError):
         pass  # AI không trả về JSON hợp lệ thì giữ nguyên raw_text làm câu trả lời
 
@@ -117,4 +126,4 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     except Exception:
         pass  # Không lưu được lịch sử thì bỏ qua, không chặn việc trả lời AI
 
-    return {"reply": reply_text}    
+    return {"reply": reply_text, "task_added": task_added} 
