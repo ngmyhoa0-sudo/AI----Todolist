@@ -54,9 +54,12 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     reply_text = res.choices[0].message.content
 
-    supabase.table("chat_history").insert([
-        {"user_id": user["id"], "role": "user", "content": chat.message},
-        {"user_id": user["id"], "role": "ai", "content": reply_text}
-    ]).execute()
+    try:
+        supabase.table("chat_history").insert([
+            {"user_id": user["id"], "role": "user", "content": chat.message},
+            {"user_id": user["id"], "role": "ai", "content": reply_text}
+        ]).execute()
+    except Exception:
+        pass  # Không lưu được lịch sử thì bỏ qua, không chặn việc trả lời AI
 
     return {"reply": reply_text}
