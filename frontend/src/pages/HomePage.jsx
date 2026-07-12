@@ -133,7 +133,7 @@ export default function HomePage() {
         <StatsCard />
         <StatsChart />
 
-        <ChatBox />
+        <ChatBox onTaskAdded={loadTodos} />
 
         {!loading && !error && <Notification todos={todos} />}
 
