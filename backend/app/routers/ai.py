@@ -43,6 +43,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     today_str = datetime.now().strftime("%Y-%m-%d")
     tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    now_str = datetime.now().strftime("%H:%M")
 
     prompt = f"""
     [persona]
@@ -51,6 +52,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     [context]
     Hôm nay là ngày: {today_str}
     Ngày mai là ngày: {tomorrow_str}
+    Giờ hiện tại: {now_str}
     Danh sách task hiện tại của người dùng (mỗi task có "id" riêng): {tasks}
     Người dùng vừa nhắn: "{chat.message}"
 
@@ -63,17 +65,30 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     Nếu người dùng nói đã làm xong / hoàn thành 1 task, đây CŨNG LÀ (b) SỬA, với is_completed = true.
 
+    Quy tắc quan trọng: nếu người dùng chỉ ĐỀ CẬP tới 1 sự kiện/deadline sắp tới (ví dụ "tôi sắp có bài kiểm tra") nhưng KHÔNG yêu cầu rõ ràng bằng các từ như "thêm/tạo/nhắc/lên lịch", hãy trả về action "chat" và HỎI LẠI xem người dùng có muốn tạo task nhắc lịch cho việc đó không, thay vì tự ý thêm task hoặc chỉ động viên suông.
+
     Quy tắc tính deadline (áp dụng cho (a) và (b)):
     - Ngày: tính CHÍNH XÁC theo "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}.
-    - Giờ: nếu nói buổi chung chung không kèm số giờ, dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
+    - Nếu người dùng nói thời gian tương đối theo PHÚT/GIỜ kể từ bây giờ (ví dụ "trong 2 phút nữa", "sau 1 tiếng nữa"), cộng thêm đúng số phút/giờ đó vào giờ hiện tại ({now_str}) cùng ngày {today_str} để tính deadline chính xác. Ví dụ minh hoạ cách tính (không phải giờ thật): nếu giờ hiện tại là 05:30 và người dùng nói "trong 2 phút nữa", deadline sẽ là 05:32 cùng ngày.
+    - Nếu nói buổi chung chung không kèm số giờ cụ thể (sáng/trưa/chiều/tối/đêm), dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
     - Nếu nói rõ số giờ kèm buổi (ví dụ "2 giờ chiều"), đổi đúng sang giờ 24h (2 giờ chiều = 14:00).
-    - Nếu không nói gì về giờ, để mặc định 08:00.
+    - Nếu KHÔNG nói gì cụ thể về giờ/buổi/phút (ví dụ chỉ nói "hôm nay", "trong ngày hôm nay"), để giờ mặc định là **23:59** (cuối ngày) — vì đây là việc cần hoàn thành trong ngày, không phải việc gấp trong vài phút tới.
 
     Quy tắc cho (b) và (c): PHẢI tìm đúng task trong danh sách ở trên dựa vào tên gần giống nhất, rồi lấy đúng trường "id" của nó để đưa vào "task_id". TUYỆT ĐỐI không tự bịa số id. Nếu không tìm thấy task nào khớp, trả về action "chat" và giải thích cho người dùng là không tìm thấy task đó.
 
     [examples]
     Người dùng: "thêm task học tiếng Anh ngày mai"
-    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str} 08:00", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
+    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str} 23:59", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
+
+    Người dùng: "check email trong 2 phút nữa"
+    → tính deadline bằng giờ hiện tại {now_str} cộng thêm 2 phút, cùng ngày {today_str}
+    → {{"action": "add_task", "title": "Check email", "deadline": "<giờ tính được>", "reply": "Đã thêm task \\"Check email\\", hạn trong 2 phút nữa nhé!"}}
+
+    Người dùng: "tôi cần uống 8 cốc nước hôm nay"
+    → {{"action": "add_task", "title": "Uống 8 cốc nước", "deadline": "{today_str} 23:59", "reply": "Đã thêm task \\"Uống 8 cốc nước\\", cố gắng hoàn thành trong hôm nay nhé!"}}
+
+    Người dùng: "tôi sắp có bài kiểm tra toán"
+    → {{"action": "chat", "reply": "Bạn có muốn mình tạo 1 task nhắc lịch ôn thi cho bài kiểm tra toán không? Nếu có, cho mình biết ngày thi nhé!"}}
 
     Người dùng: "sửa cuộc họp thành 3 giờ chiều mai" (giả sử tìm thấy task "Cuộc họp" có id là 7 trong danh sách)
     → {{"action": "update_task", "task_id": 7, "deadline": "{tomorrow_str} 15:00", "reply": "Đã sửa deadline \\"Cuộc họp\\" sang 3 giờ chiều mai nhé!"}}
@@ -98,6 +113,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     [tone]
     Giọng văn ngắn gọn, tích cực, khích lệ, giống một trợ lý cá nhân đáng tin cậy.
     """
+
     try:
         res = client.chat.completions.create(
             model=MODEL,
