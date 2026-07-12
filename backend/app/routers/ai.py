@@ -36,9 +36,7 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
 
     return {"result": raw_text}
 
-# Chatbot: vừa trả lời câu hỏi, vừa tự thêm task nếu người dùng có ý định đó
-
-    
+# Chatbot: vừa trả lời câu hỏi, vừa tự thêm/sửa/xoá task nếu người dùng có ý định đó
 @router.post("/chat")
 def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     tasks = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute().data
@@ -59,9 +57,11 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     [task]
     Xác định người dùng đang muốn 1 trong 4 việc sau:
     (a) THÊM task mới
-    (b) SỬA task đã có (đổi tên hoặc đổi deadline)
+    (b) SỬA task đã có (đổi tên, đổi deadline, HOẶC đánh dấu đã hoàn thành / chưa hoàn thành)
     (c) XOÁ task đã có
     (d) Chỉ hỏi đáp/trò chuyện thông thường
+
+    Nếu người dùng nói đã làm xong / hoàn thành 1 task, đây CŨNG LÀ (b) SỬA, với is_completed = true.
 
     Quy tắc tính deadline (áp dụng cho (a) và (b)):
     - Ngày: tính CHÍNH XÁC theo "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}.
@@ -84,10 +84,13 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     Người dùng: "tôi còn bao nhiêu task chưa xong"
     → {{"action": "chat", "reply": "Bạn còn 2 task chưa hoàn thành: ..."}}
 
+    Người dùng: "tôi đã hoàn thành học bài rồi" (giả sử tìm thấy task "Học bài" có id là 9 trong danh sách)
+    → {{"action": "update_task", "task_id": 9, "is_completed": true, "reply": "Tuyệt vời! Đã đánh dấu \\"Học bài\\" hoàn thành nhé!"}}
+
     [format]
     Chỉ trả về DUY NHẤT 1 dòng JSON hợp lệ theo đúng 1 trong 4 cấu trúc:
     - Thêm: {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD HH:MM hoặc null", "reply": "..."}}
-    - Sửa: {{"action": "update_task", "task_id": <số>, "title": "... hoặc null nếu không đổi tên", "deadline": "YYYY-MM-DD HH:MM hoặc null nếu không đổi deadline", "reply": "..."}}
+    - Sửa: {{"action": "update_task", "task_id": <số>, "title": "... hoặc null", "deadline": "YYYY-MM-DD HH:MM hoặc null", "is_completed": true/false/null, "reply": "..."}}
     - Xoá: {{"action": "delete_task", "task_id": <số>, "reply": "..."}}
     - Trò chuyện: {{"action": "chat", "reply": "..."}}
     Không thêm chữ giải thích, không bọc trong dấu ```.
@@ -133,6 +136,9 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
             deadline = parsed.get("deadline")
             if isinstance(deadline, str) and deadline.strip().lower() != "null" and deadline.strip():
                 update_data["deadline"] = deadline
+            is_completed = parsed.get("is_completed")
+            if isinstance(is_completed, bool):
+                update_data["is_completed"] = is_completed
             if update_data:
                 supabase.table("tasks").update(update_data) \
                     .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
