@@ -3,14 +3,14 @@ import { getStats } from "../services/statsService";
 import { getErrorMessage } from "../utils/errorMessage";
 
 // StatsCard chỉ làm 1 việc: hiển thị số liệu tổng quan, tự gọi statsService
-export default function StatsCard() {
+export default function StatsCard({ refreshTrigger }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadStats = async () => {
     setLoading(true);

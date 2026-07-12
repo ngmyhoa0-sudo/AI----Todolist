@@ -12,14 +12,14 @@ import { getStats } from "../services/statsService";
 import { getErrorMessage } from "../utils/errorMessage";
 
 // StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột thống kê task, tự gọi statsService
-export default function StatsChart() {
+export default function StatsChart({ refreshTrigger }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadStats = async () => {
     setLoading(true);

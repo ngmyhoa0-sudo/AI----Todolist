@@ -133,8 +133,8 @@ export default function HomePage() {
           </button>
         </div>
 
-        <StatsCard key={`card-${refreshCount}`} />
-        <StatsChart key={`chart-${refreshCount}`} />
+        <StatsCard refreshTrigger={refreshCount} />
+        <StatsChart refreshTrigger={refreshCount} />
 
         <ChatBox onTaskAdded={loadTodos} />
 
