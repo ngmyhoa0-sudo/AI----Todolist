@@ -1,5 +1,9 @@
+import { useState } from "react";
+
 // TodoItem chỉ làm 1 việc: hiển thị 1 task đơn lẻ
 export default function TodoItem({ todo, onToggle, onDelete }) {
+  const [deleteHover, setDeleteHover] = useState(false);
+
   return (
     <li style={styles.item}>
       <input
@@ -32,7 +36,9 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
             onDelete(todo.id);
           }
         }}
-        style={styles.deleteBtn}
+        onMouseEnter={() => setDeleteHover(true)}
+        onMouseLeave={() => setDeleteHover(false)}
+        style={{ ...styles.deleteBtn, ...(deleteHover ? styles.deleteBtnHover : {}) }}
         aria-label="Xóa task"
       >
         Xóa
@@ -52,7 +58,12 @@ const styles = {
   titleDone: { color: "#aaa", textDecoration: "line-through" },
   deadline: { fontSize: "12px", color: "#999", whiteSpace: "nowrap" },
   deleteBtn: {
-    background: "none", border: "none", color: "#d0453a",
-    fontSize: "13px", cursor: "pointer", padding: "4px 8px",
+    background: "#fff5f5", border: "1px solid #fcc", color: "#d0453a",
+    fontSize: "13px", cursor: "pointer",
+    width: "44px", height: "44px", padding: "4px",
+    borderRadius: "9px", display: "flex", alignItems: "center",
+    justifyContent: "center", flexShrink: 0,
+    transition: "background-color 0.15s ease, border-color 0.15s ease",
   },
+  deleteBtnHover: { backgroundColor: "#ffe3e3", borderColor: "#d0453a" },
 };
