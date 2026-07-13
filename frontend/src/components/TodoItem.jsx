@@ -27,7 +27,11 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
       )}
       <button
         type="button"
-        onClick={() => onDelete(todo.id)}
+        onClick={() => {
+          if (window.confirm("Bạn có chắc chắn muốn xoá task này không?")) {
+            onDelete(todo.id);
+          }
+        }}
         style={styles.deleteBtn}
         aria-label="Xóa task"
       >
