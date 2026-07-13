@@ -21,6 +21,13 @@ export default function StatsChart({ refreshTrigger }) {
     loadStats();
   }, [refreshTrigger]);
 
+  // Tự động gọi lại API mỗi 60 giây để số liệu (đặc biệt "Quá hạn") cập nhật theo thời gian thực,
+  // không chỉ khi người dùng thêm/sửa/xoá task
+  useEffect(() => {
+    const interval = setInterval(loadStats, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const loadStats = async () => {
     setLoading(true);
     setError("");
