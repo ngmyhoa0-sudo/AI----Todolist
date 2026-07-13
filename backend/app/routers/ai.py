@@ -46,6 +46,13 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
 def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     tasks = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute().data
 
+    history_res = supabase.table("chat_history").select("role,content") \
+        .eq("user_id", user["id"]).order("created_at", desc=True).limit(10).execute()
+    recent_history = list(reversed(history_res.data)) if history_res.data else []
+    history_text = "\n".join(
+        f'{"Người dùng" if h["role"] == "user" else "AI"}: {h["content"]}' for h in recent_history
+    ) or "(chưa có hội thoại trước đó)"
+
     now_vn = datetime.now(VN_TZ)
     today_str = now_vn.strftime("%Y-%m-%d")
     tomorrow_str = (now_vn + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -60,7 +67,15 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     Ngày mai là ngày: {tomorrow_str}
     Giờ hiện tại: {now_str}
     Danh sách task hiện tại của người dùng (mỗi task có "id" riêng): {tasks}
+    Lịch sử hội thoại gần đây (cũ → mới):
+    {history_text}
     Người dùng vừa nhắn: "{chat.message}"
+
+    Quy tắc XÁC ĐỊNH tin nhắn hiện tại là TRẢ LỜI TIẾP THEO hay YÊU CẦU MỚI (xét TRƯỚC mọi quy tắc khác):
+    - Nếu tin nhắn cuối cùng của AI trong lịch sử ở trên là một câu HỎI LẠI (hỏi giờ, hỏi có muốn tạo task không, hỏi hạn chót...) VÀ tin nhắn "{chat.message}" hiện tại là câu trả lời NGẮN/PHỤ THUỘC vào câu hỏi đó (ví dụ chỉ là "có", "được", "ừ", một mốc giờ, một ngày...) — không tự nó là một yêu cầu rõ ràng, độc lập — thì đây là TRẢ LỜI TIẾP THEO: PHẢI kết hợp câu hỏi trước + câu trả lời hiện tại để suy ra đúng hành động (add_task/update_task/delete_task), TUYỆT ĐỐI KHÔNG hỏi lại vòng vo, KHÔNG trả lời "tôi không rõ bạn muốn gì" khi ngữ cảnh đã đủ rõ, và KHÔNG được lặp lại y nguyên câu hỏi đã hỏi trước đó.
+    - Ngược lại, nếu tin nhắn "{chat.message}" TỰ NÓ đã là một yêu cầu mới, rõ ràng, đầy đủ chủ ngữ/hành động (ví dụ bắt đầu bằng "tôi muốn...", "thêm task...", "xoá...", "sửa...", nói về một việc/chủ đề KHÁC với câu hỏi đang dang dở) thì đây là YÊU CẦU MỚI, ĐỘC LẬP: xử lý yêu cầu này riêng theo đúng các quy tắc phân loại bên dưới (kể cả quy tắc hỏi lại giờ nếu cần), và BỎ QUA câu hỏi cũ còn dang dở — không được trộn 2 yêu cầu vào chung 1 câu trả lời, không được nhắc lại câu hỏi cũ trong cùng phản hồi này.
+
+    Nếu người dùng cung cấp NHIỀU mốc giờ khác nhau cho cùng 1 việc lặp lại (ví dụ nhắc uống nước lúc 9h sáng, 12h trưa, 14h chiều), vì mỗi task chỉ lưu được 1 deadline duy nhất, hãy tạo task với deadline là mốc giờ GẦN NHẤT sắp tới, đặt "title" ghi rõ đầy đủ các mốc giờ (ví dụ "Uống nước (9h, 12h, 14h)"), và trong "reply" nói rõ đã đặt nhắc theo giờ nào, đồng thời hỏi người dùng có muốn tạo thêm task riêng cho các mốc còn lại không.
 
     [task]
     Xác định người dùng đang muốn 1 trong 4 việc sau:
@@ -73,12 +88,22 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     Quy tắc quan trọng: nếu người dùng chỉ ĐỀ CẬP tới 1 sự kiện/deadline sắp tới (ví dụ "tôi sắp có bài kiểm tra") nhưng KHÔNG yêu cầu rõ ràng bằng các từ như "thêm/tạo/nhắc/lên lịch", hãy trả về action "chat" và HỎI LẠI xem người dùng có muốn tạo task nhắc lịch cho việc đó không, thay vì tự ý thêm task hoặc chỉ động viên suông.
 
-    Quy tắc tính deadline (áp dụng cho (a) và (b)):
+    Quy tắc HỎI LẠI GIỜ (áp dụng cho (a) và (b), xét TRƯỚC khi tính deadline — phân loại theo BẢN CHẤT câu yêu cầu, KHÔNG theo việc đó "quan trọng" hay "vặt"):
+
+    1) Việc mang tính NHẮC NHỞ/LỊCH TRÌNH — chỉ có tác dụng nếu làm ĐÚNG giờ (nhắc uống nước lúc mấy giờ, uống thuốc, họp, báo thức, việc lặp lại hàng ngày, lịch học/lịch hẹn...). Nếu người dùng KHÔNG nói giờ cụ thể — kể cả khi chỉ nói buổi chung chung (sáng/trưa/chiều/tối/đêm), hoặc chỉ nói NGÀY (hôm nay/ngày mai/thứ mấy) mà không kèm số giờ nào cả — vẫn tính là CHƯA có giờ cụ thể. TUYỆT ĐỐI KHÔNG tự suy đoán giờ (theo buổi hay theo giờ mặc định cuối ngày). Phải trả về action "chat" và hỏi lại giờ chính xác trước khi tạo/sửa task.
+
+    2) Việc có DEADLINE/HẠN CHÓT (nộp bài, deadline nhóm, thi cử...). Nếu người dùng không nói rõ hạn chót là ngày giờ nào, trả về action "chat" và hỏi rõ hạn chót. Nếu người dùng có nhắc tới CẢ mốc bắt đầu lẫn hạn chót, PHẢI hỏi lại để làm rõ (ví dụ xác nhận muốn tạo task theo mốc nào, hoặc tạo riêng từng mốc) — TUYỆT ĐỐI không tự gộp 2 mốc lại thành 1 giá trị deadline duy nhất.
+
+    3) Việc KHÔNG quan trọng làm lúc nào trong ngày (ví dụ "dọn phòng", "đọc sách" nói kiểu ngẫu hứng, không phải một cuộc hẹn/lịch trình cố định) — chỉ loại này mới được dùng giờ mặc định, không cần hỏi lại:
+       - Nếu có kèm buổi chung chung (sáng/trưa/chiều/tối/đêm) nhưng không có số giờ cụ thể, dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
+       - Nếu KHÔNG nói gì về giờ/buổi/phút, để giờ mặc định là 23:59 (cuối ngày).
+
+    Nói ngắn gọn: nếu việc chỉ có ý nghĩa khi làm ĐÚNG một thời điểm cụ thể (dù nhỏ như uống nước hay lớn như deadline), PHẢI hỏi giờ rõ ràng, không tự suy đoán. Chỉ bỏ qua việc hỏi giờ khi việc đó thực sự không quan trọng làm lúc nào trong ngày.
+
+    Quy tắc tính deadline khi ĐÃ đủ thông tin giờ (áp dụng cho (a) và (b), sau khi qua được bước phân loại ở trên):
     - Ngày: tính CHÍNH XÁC theo "hôm nay" = {today_str}, "ngày mai" = {tomorrow_str}.
     - Nếu người dùng nói thời gian tương đối theo PHÚT/GIỜ kể từ bây giờ (ví dụ "trong 2 phút nữa", "sau 1 tiếng nữa"), cộng thêm đúng số phút/giờ đó vào giờ hiện tại ({now_str}) cùng ngày {today_str} để tính deadline chính xác. Ví dụ minh hoạ cách tính (không phải giờ thật): nếu giờ hiện tại là 05:30 và người dùng nói "trong 2 phút nữa", deadline sẽ là 05:32 cùng ngày.
-    - Nếu nói buổi chung chung không kèm số giờ cụ thể (sáng/trưa/chiều/tối/đêm), dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
     - Nếu nói rõ số giờ kèm buổi (ví dụ "2 giờ chiều"), đổi đúng sang giờ 24h (2 giờ chiều = 14:00).
-    - Nếu KHÔNG nói gì cụ thể về giờ/buổi/phút (ví dụ chỉ nói "hôm nay", "trong ngày hôm nay"), để giờ mặc định là **23:59** (cuối ngày) — vì đây là việc cần hoàn thành trong ngày, không phải việc gấp trong vài phút tới.
 
     Quy tắc cho (b) và (c): PHẢI tìm đúng task trong danh sách ở trên dựa vào tên gần giống nhất, rồi lấy đúng trường "id" của nó để đưa vào "task_id". TUYỆT ĐỐI không tự bịa số id. Nếu không tìm thấy task nào khớp, trả về action "chat" và giải thích cho người dùng là không tìm thấy task đó.
 
@@ -90,8 +115,26 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     → tính deadline bằng giờ hiện tại {now_str} cộng thêm 2 phút, cùng ngày {today_str}
     → {{"action": "add_task", "title": "Check email", "deadline": "<giờ tính được>", "reply": "Đã thêm task \\"Check email\\", hạn trong 2 phút nữa nhé!"}}
 
-    Người dùng: "tôi cần uống 8 cốc nước hôm nay"
+    Người dùng: "tôi cần uống 8 cốc nước hôm nay" (mục tiêu cả ngày, không phải nhắc đúng 1 thời điểm)
     → {{"action": "add_task", "title": "Uống 8 cốc nước", "deadline": "{today_str} 23:59", "reply": "Đã thêm task \\"Uống 8 cốc nước\\", cố gắng hoàn thành trong hôm nay nhé!"}}
+
+    Người dùng: "thêm task nhắc nhở tối nay tôi có lịch học" (nhắc nhở/lịch trình, chỉ nói buổi "tối" chung chung, không có giờ cụ thể → PHẢI hỏi lại, không tự đoán 19:00)
+    → {{"action": "chat", "reply": "Lịch học tối nay của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
+
+    Người dùng: "nhắc tôi uống thuốc lúc 8 giờ tối" (nhắc nhở nhưng ĐÃ CÓ giờ cụ thể → thêm trực tiếp)
+    → {{"action": "add_task", "title": "Uống thuốc", "deadline": "{today_str} 20:00", "reply": "Đã thêm task \\"Uống thuốc\\", nhắc lúc 20:00 tối nay nhé!"}}
+
+    Người dùng: "tôi muốn tạo một task nhắc lịch học cho ngày mai" (chỉ nói NGÀY "ngày mai", không có giờ → vẫn phải hỏi lại giờ, dù có nói ngày)
+    → {{"action": "chat", "reply": "Lịch học ngày mai của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
+
+    (Ví dụ về YÊU CẦU MỚI đè lên câu hỏi cũ dang dở) Lịch sử: AI vừa hỏi "Bạn muốn nhắc mình uống nước vào mấy giờ mỗi ngày vậy?" nhưng chưa được trả lời rõ. Người dùng nhắn tiếp: "tôi muốn tạo một task nhắc lịch học cho ngày mai" — đây là yêu cầu MỚI, rõ ràng, khác chủ đề, KHÔNG phải câu trả lời cho câu hỏi uống nước → xử lý độc lập theo đúng quy tắc hỏi giờ ở trên, KHÔNG nhắc gì tới câu hỏi uống nước trong câu trả lời này
+    → {{"action": "chat", "reply": "Lịch học ngày mai của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
+
+    Người dùng: "tôi có deadline nộp báo cáo" (có hạn chót nhưng không nói rõ ngày giờ → phải hỏi lại)
+    → {{"action": "chat", "reply": "Hạn nộp báo cáo là ngày giờ nào vậy bạn? Cho mình biết để tạo task nhé."}}
+
+    Người dùng: "bài tập nhóm bắt đầu làm thứ 2, nộp thứ 6" (có cả mốc bắt đầu và hạn chót → không tự gộp, phải hỏi rõ)
+    → {{"action": "chat", "reply": "Bạn muốn mình tạo task theo hạn nộp (thứ 6) hay tạo riêng cả mốc bắt đầu (thứ 2) và hạn nộp? Cho mình biết giờ cụ thể của mốc bạn muốn nhé."}}
 
     Người dùng: "tôi sắp có bài kiểm tra toán"
     → {{"action": "chat", "reply": "Bạn có muốn mình tạo 1 task nhắc lịch ôn thi cho bài kiểm tra toán không? Nếu có, cho mình biết ngày thi nhé!"}}
