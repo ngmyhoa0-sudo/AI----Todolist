@@ -107,3 +107,6 @@ backend/node_modules/
 
 # Visual Studio
 .vs/
+
+# Local reports
+BAOCAO_KHAOSAT.md
