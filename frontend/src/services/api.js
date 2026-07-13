@@ -2,6 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+    timeout: 30000,
 });
 
 api.interceptors.request.use((config) => {
@@ -18,6 +19,11 @@ let pendingRequests = [];
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
+        if (error.code === "ECONNABORTED" && error.message?.includes("timeout")) {
+            error.message = "Yêu cầu quá thời gian chờ, vui lòng thử lại.";
+            return Promise.reject(error);
+        }
+
         const originalRequest = error.config;
 
         if (

@@ -7,11 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
 from app.dependencies import verify_token
-from groq import Groq
+from groq import Groq, APITimeoutError
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
 MODEL = "llama-3.3-70b-versatile"
 
 # Thêm task bằng ngôn ngữ tự nhiên (tab "Ngôn ngữ tự nhiên")
@@ -28,6 +28,8 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail="AI phản hồi quá lâu, vui lòng thử lại sau.")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
 
@@ -119,6 +121,8 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail="AI phản hồi quá lâu, vui lòng thử lại sau.")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
 
@@ -127,46 +131,52 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
 
     reply_text = raw_text
     task_added = False
+    parsed = None
     try:
         parsed = json.loads(raw_text)
         reply_text = parsed.get("reply", raw_text)
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        parsed = None  # AI không trả về JSON hợp lệ thì giữ nguyên raw_text làm câu trả lời
+
+    if parsed:
         action = parsed.get("action")
+        try:
+            if action == "add_task" and parsed.get("title"):
+                deadline = parsed.get("deadline")
+                if isinstance(deadline, str) and deadline.strip().lower() == "null":
+                    deadline = None
+                supabase.table("tasks").insert({
+                    "title": parsed["title"],
+                    "deadline": deadline,
+                    "user_id": user["id"],
+                    "is_completed": False
+                }).execute()
+                task_added = True
 
-        if action == "add_task" and parsed.get("title"):
-            deadline = parsed.get("deadline")
-            if isinstance(deadline, str) and deadline.strip().lower() == "null":
-                deadline = None
-            supabase.table("tasks").insert({
-                "title": parsed["title"],
-                "deadline": deadline,
-                "user_id": user["id"],
-                "is_completed": False
-            }).execute()
-            task_added = True
+            elif action == "update_task" and parsed.get("task_id"):
+                update_data = {}
+                title = parsed.get("title")
+                if isinstance(title, str) and title.strip().lower() != "null" and title.strip():
+                    update_data["title"] = title
+                deadline = parsed.get("deadline")
+                if isinstance(deadline, str) and deadline.strip().lower() != "null" and deadline.strip():
+                    update_data["deadline"] = deadline
+                is_completed = parsed.get("is_completed")
+                if isinstance(is_completed, bool):
+                    update_data["is_completed"] = is_completed
+                if update_data:
+                    supabase.table("tasks").update(update_data) \
+                        .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
+                    task_added = True
 
-        elif action == "update_task" and parsed.get("task_id"):
-            update_data = {}
-            title = parsed.get("title")
-            if isinstance(title, str) and title.strip().lower() != "null" and title.strip():
-                update_data["title"] = title
-            deadline = parsed.get("deadline")
-            if isinstance(deadline, str) and deadline.strip().lower() != "null" and deadline.strip():
-                update_data["deadline"] = deadline
-            is_completed = parsed.get("is_completed")
-            if isinstance(is_completed, bool):
-                update_data["is_completed"] = is_completed
-            if update_data:
-                supabase.table("tasks").update(update_data) \
+            elif action == "delete_task" and parsed.get("task_id"):
+                supabase.table("tasks").delete() \
                     .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
                 task_added = True
 
-        elif action == "delete_task" and parsed.get("task_id"):
-            supabase.table("tasks").delete() \
-                .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
-            task_added = True
-
-    except (json.JSONDecodeError, TypeError, AttributeError):
-        pass  # AI không trả về JSON hợp lệ thì giữ nguyên raw_text làm câu trả lời
+        except Exception:
+            # Lỗi khi ghi Supabase: vẫn giữ câu trả lời AI đã sinh ra, chỉ báo thêm là chưa lưu được thay đổi
+            reply_text += "\n\n(Lưu ý: có lỗi khi cập nhật task, vui lòng thử lại.)"
 
     try:
         supabase.table("chat_history").insert([
