@@ -1,25 +1,34 @@
 import { useState } from "react";
 
+// Tên task hợp lệ khi chứa ít nhất 1 ký tự chữ/số (chặn chuỗi chỉ toàn ký tự đặc biệt như `" "`, `---`, `...`)
+const HAS_ALPHANUMERIC = /[\p{L}\p{N}]/u;
+
 // AddTaskForm chỉ làm 1 việc: nhận input task mới (thường + ngôn ngữ tự nhiên) rồi gửi lên qua onAdd
 export default function AddTaskForm({ onAdd, onAddNatural }) {
   const [mode, setMode] = useState("normal");
   const [text, setText] = useState("");
   const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    const trimmedText = text.trim();
+    if (!trimmedText || !HAS_ALPHANUMERIC.test(trimmedText)) {
+      setError("Vui lòng nhập tên task");
+      return;
+    }
+    setError("");
     setLoading(true);
     try {
       if (mode === "normal") {
         if (deadline) {
-          await onAdd(text, deadline);
+          await onAdd(trimmedText, deadline);
         } else {
-          await onAdd(text);
+          await onAdd(trimmedText);
         }
       } else {
-        await onAddNatural(text);
+        await onAddNatural(trimmedText);
       }
       setText("");
       setDeadline("");
@@ -48,10 +57,13 @@ export default function AddTaskForm({ onAdd, onAddNatural }) {
       </div>
       <div style={styles.inputRow}>
         <input
-          style={styles.input}
+          style={{ ...styles.input, ...(error ? styles.inputError : {}) }}
           type="text"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (error) setError("");
+          }}
           placeholder={
             mode === "normal"
               ? "Nhập tên task..."
@@ -62,6 +74,7 @@ export default function AddTaskForm({ onAdd, onAddNatural }) {
           {loading ? "Đang thêm..." : "Thêm"}
         </button>
       </div>
+      {error && <p style={styles.errorText}>{error}</p>}
       {mode === "normal" && (
         <div style={styles.deadlineRow}>
           <label style={styles.deadlineLabel}>Deadline (không bắt buộc)</label>
@@ -90,6 +103,8 @@ const styles = {
     flex: 1, padding: "10px 12px", border: "1px solid #e0e0e0",
     borderRadius: "7px", fontSize: "14px", outline: "none", backgroundColor: "#fafafa",
   },
+  inputError: { borderColor: "#d0453a" },
+  errorText: { fontSize: "12px", color: "#d0453a", margin: "6px 0 0" },
   addBtn: {
     padding: "10px 18px", backgroundColor: "#111", color: "#fff",
     border: "none", borderRadius: "7px", fontSize: "14px",
