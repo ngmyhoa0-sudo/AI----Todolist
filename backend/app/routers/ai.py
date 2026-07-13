@@ -3,6 +3,9 @@ import os
 import json
 
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
@@ -43,9 +46,10 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
 def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     tasks = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute().data
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-    now_str = datetime.now().strftime("%H:%M")
+    now_vn = datetime.now(VN_TZ)
+    today_str = now_vn.strftime("%Y-%m-%d")
+    tomorrow_str = (now_vn + timedelta(days=1)).strftime("%Y-%m-%d")
+    now_str = now_vn.strftime("%H:%M")
 
     prompt = f"""
     [persona]
