@@ -1,0 +1,3 @@
+﻿Test Case,Precondition,Expected,Actual,Kết quả
+TC-STATS-01,"Có 4 task: 1 hoàn thành, 1 quá hạn, 2 đang làm","{'total': 4, 'completed': 1, 'active': 2, 'overdue': 1}","{'total': 4, 'completed': 1, 'active': 2, 'overdue': 1}",PASS
+TC-STATS-02,User chưa có task nào,"{'total': 0, 'completed': 0, 'active': 0, 'overdue': 0}","{'total': 0, 'completed': 0, 'active': 0, 'overdue': 0}",PASS

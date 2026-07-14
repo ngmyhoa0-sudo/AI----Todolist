@@ -1,0 +1,5 @@
+﻿Test Case,Precondition,Action,Expected,Actual,Kết quả
+TC-MISC-01,Server đang chạy,GET /,200,200,PASS
+TC-MISC-02,User đã có 1 tin nhắn trong lịch sử,GET /chat/history,200,200,PASS
+TC-MISC-03,Lưu 1 tin nhắn mới hợp lệ,POST /chat/history,200,200,PASS
+TC-MISC-04,Xoá toàn bộ lịch sử chat của user,DELETE /chat/history,200,200,PASS

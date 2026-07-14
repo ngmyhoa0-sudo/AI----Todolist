@@ -41,3 +41,24 @@ def client(mock_supabase, monkeypatch):
         yield c
 
     app.dependency_overrides.clear()
+
+@pytest.fixture
+def client_real_auth(mock_supabase, monkeypatch):
+    """TestClient KHÔNG override verify_token — dùng để kiểm tra đúng logic xác thực thật."""
+    import app.routers.auth as auth_router
+    import app.routers.todo as todo_router
+    import app.routers.ai as ai_router
+    import app.routers.stats as stats_router
+    import app.routers.chat_history as chat_router
+    import app.dependencies as deps
+
+    monkeypatch.setattr(auth_router, "supabase", mock_supabase)
+    monkeypatch.setattr(todo_router, "supabase", mock_supabase)
+    monkeypatch.setattr(ai_router, "supabase", mock_supabase)
+    monkeypatch.setattr(stats_router, "supabase", mock_supabase)
+    monkeypatch.setattr(chat_router, "supabase", mock_supabase)
+    monkeypatch.setattr(deps, "supabase", mock_supabase)
+
+    from app.main import app
+    with TestClient(app) as c:
+        yield c

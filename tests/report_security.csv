@@ -1,0 +1,5 @@
+﻿Test Case,Precondition,Expected,Actual,Kết quả
+TC-SEC-01,Gọi API cần xác thực nhưng không gửi header Authorization,422,422,PASS
+TC-SEC-02,Header Authorization sai định dạng (không phải Bearer),401,401,PASS
+TC-SEC-03,Token có định dạng Bearer nhưng không hợp lệ/hết hạn,401,401,PASS
+TC-SEC-04,"Xoá task luôn kèm điều kiện .eq('user_id', <user hiện tại>)","Có gọi .eq('user_id', 'test-user-id')","[call('user_id', 'test-user-id')]",PASS
