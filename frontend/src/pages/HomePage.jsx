@@ -138,7 +138,7 @@ export default function HomePage() {
 
         <ChatBox onTaskAdded={loadTodos} />
 
-        {!loading && !error && <Notification todos={todos} />}
+        {!loading && <Notification todos={todos} />}
 
         <AddTaskForm onAdd={handleAdd} onAddNatural={handleAddNatural} />
         {naturalAddError && <p style={styles.error}>{naturalAddError}</p>}
@@ -147,7 +147,7 @@ export default function HomePage() {
 
         {loading && <p style={styles.loading}>Đang tải...</p>}
         {error && <p style={styles.error}>{error}</p>}
-        {!loading && !error && (
+        {!loading && (
           <TodoList
             todos={filteredTodos}
             onToggle={handleToggle}
