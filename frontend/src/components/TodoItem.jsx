@@ -3,71 +3,73 @@ import { isOverdue } from "../utils/deadline";
 
 // TodoItem chỉ làm 1 việc: hiển thị 1 task đơn lẻ
 export default function TodoItem({ todo, onToggle, onDelete }) {
-  const [deleteHover, setDeleteHover] = useState(false);
-  const overdue = isOverdue(todo);
+    const [deleteHover, setDeleteHover] = useState(false);
+    const overdue = isOverdue(todo);
 
-  return (
-    <li style={styles.item}>
-      <input
-        type="checkbox"
-        checked={todo.is_completed}
-        onChange={() => onToggle(todo.id, todo.is_completed)}
-        style={styles.checkbox}
-      />
-      <span style={{
-        ...styles.title,
-        ...(todo.is_completed ? styles.titleDone : {}),
-        ...(overdue ? styles.titleOverdue : {}),
-      }}>
-        {todo.title}
-      </span>
-      {todo.deadline && (
-        <span style={styles.deadline}>
-          {new Date(todo.deadline).toLocaleString("vi-VN", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={() => {
-          if (window.confirm("Bạn có chắc chắn muốn xoá task này không?")) {
-            onDelete(todo.id);
-          }
-        }}
-        onMouseEnter={() => setDeleteHover(true)}
-        onMouseLeave={() => setDeleteHover(false)}
-        style={{ ...styles.deleteBtn, ...(deleteHover ? styles.deleteBtnHover : {}) }}
-        aria-label="Xóa task"
-      >
-        Xóa
-      </button>
-    </li>
-  );
+    return (
+        <li style={styles.item}>
+            <input
+                type="checkbox"
+                checked={todo.is_completed}
+                onChange={() => onToggle(todo.id, todo.is_completed)}
+                style={styles.checkbox}
+            />
+            <span style={{
+                ...styles.title,
+                ...(todo.is_completed ? styles.titleDone : {}),
+                ...(overdue ? styles.titleOverdue : {}),
+            }}>
+                {todo.title}
+            </span>
+            {todo.deadline && (
+                <span style={{ ...styles.deadline, ...(todo.repeat_rule ? styles.deadlineRepeat : {}) }}>
+                    {todo.repeat_rule && "🔄 "}
+                    {new Date(todo.deadline).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    })}
+                </span>
+            )}
+            <button
+                type="button"
+                onClick={() => {
+                    if (window.confirm("Bạn có chắc chắn muốn xoá task này không?")) {
+                        onDelete(todo.id);
+                    }
+                }}
+                onMouseEnter={() => setDeleteHover(true)}
+                onMouseLeave={() => setDeleteHover(false)}
+                style={{ ...styles.deleteBtn, ...(deleteHover ? styles.deleteBtnHover : {}) }}
+                aria-label="Xóa task"
+            >
+                Xóa
+            </button>
+        </li>
+    );
 }
 
 const styles = {
-  item: {
-    display: "flex", alignItems: "center", gap: "10px",
-    padding: "12px 14px", backgroundColor: "#fff",
-    border: "1px solid #eee", borderRadius: "8px", marginBottom: "8px",
-  },
-  checkbox: { width: "16px", height: "16px", cursor: "pointer", flexShrink: 0 },
-  title: { flex: 1, fontSize: "14px", color: "#111" },
-  titleDone: { color: "#aaa", textDecoration: "line-through" },
-  titleOverdue: { color: "#d0453a", textDecoration: "line-through" },
-  deadline: { fontSize: "12px", color: "#999", whiteSpace: "nowrap" },
-  deleteBtn: {
-    background: "#fff5f5", border: "1px solid #fcc", color: "#d0453a",
-    fontSize: "13px", cursor: "pointer",
-    width: "44px", height: "44px", padding: "4px",
-    borderRadius: "9px", display: "flex", alignItems: "center",
-    justifyContent: "center", flexShrink: 0,
-    transition: "background-color 0.15s ease, border-color 0.15s ease",
-  },
-  deleteBtnHover: { backgroundColor: "#ffe3e3", borderColor: "#d0453a" },
+    item: {
+        display: "flex", alignItems: "center", gap: "10px",
+        padding: "12px 14px", backgroundColor: "#fff",
+        border: "1px solid #eee", borderRadius: "8px", marginBottom: "8px",
+    },
+    checkbox: { width: "16px", height: "16px", cursor: "pointer", flexShrink: 0 },
+    title: { flex: 1, fontSize: "14px", color: "#111" },
+    titleDone: { color: "#aaa", textDecoration: "line-through" },
+    titleOverdue: { color: "#d0453a", textDecoration: "line-through" },
+    deadline: { fontSize: "12px", color: "#999", whiteSpace: "nowrap" },
+    deadlineRepeat: { color: "#7c4dff", fontWeight: "600" },
+    deleteBtn: {
+        background: "#fff5f5", border: "1px solid #fcc", color: "#d0453a",
+        fontSize: "13px", cursor: "pointer",
+        width: "44px", height: "44px", padding: "4px",
+        borderRadius: "9px", display: "flex", alignItems: "center",
+        justifyContent: "center", flexShrink: 0,
+        transition: "background-color 0.15s ease, border-color 0.15s ease",
+    },
+    deleteBtnHover: { backgroundColor: "#ffe3e3", borderColor: "#d0453a" },
 };

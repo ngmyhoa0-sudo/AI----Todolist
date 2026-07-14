@@ -38,9 +38,12 @@ export default function TasksPage() {
         }
     };
 
-    const handleAdd = async (title, deadline) => {
+    const handleAdd = async (title, deadline, repeatRule) => {
         try {
-            await createTodo(deadline ? { title, deadline } : { title });
+            const payload = { title };
+            if (deadline) payload.deadline = deadline;
+            if (repeatRule) payload.repeat_rule = repeatRule;
+            await createTodo(payload);
             await loadTodos();
         } catch (err) {
             setError(getErrorMessage(err));
