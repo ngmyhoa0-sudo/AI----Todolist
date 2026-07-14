@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
 import { getErrorMessage } from "../utils/errorMessage";
@@ -10,6 +10,14 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
+
+    // Vào trang đăng nhập nghĩa là chưa (hoặc không còn) có phiên hợp lệ — xoá sạch token cũ/hỏng
+    // còn sót trong localStorage để tránh các lỗi phái sinh khó hiểu (vd interceptor tự ý thử
+    // refresh bằng token cũ khi đăng nhập thất bại vì lý do khác như sai mật khẩu)
+    useEffect(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refresh_token");
+    }, []);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });

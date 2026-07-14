@@ -16,6 +16,19 @@ api.interceptors.request.use((config) => {
 let isRefreshing = false;
 let pendingRequests = [];
 
+// Các endpoint xác thực công khai (chưa cần đăng nhập) — 401 từ những endpoint này
+// (vd sai email/mật khẩu) không phải dấu hiệu "phiên hết hạn", nên KHÔNG được kích hoạt
+// luồng tự refresh token (nếu không, token cũ/hỏng còn sót trong localStorage sẽ khiến
+// interceptor âm thầm thử refresh, làm lộ nhầm lỗi "phiên hết hạn" thay vì lỗi thật)
+const PUBLIC_AUTH_PATHS = [
+    "/auth/login",
+    "/auth/register",
+    "/auth/guest",
+    "/auth/refresh",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+];
+
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -29,7 +42,7 @@ api.interceptors.response.use(
         if (
             error.response?.status !== 401 ||
             originalRequest._retry ||
-            originalRequest.url === "/auth/refresh"
+            PUBLIC_AUTH_PATHS.some((path) => originalRequest.url?.includes(path))
         ) {
             return Promise.reject(error);
         }
