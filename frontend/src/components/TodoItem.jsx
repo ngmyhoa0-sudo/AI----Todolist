@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { isOverdue } from "../utils/deadline";
 
 // TodoItem chỉ làm 1 việc: hiển thị 1 task đơn lẻ
 export default function TodoItem({ todo, onToggle, onDelete }) {
   const [deleteHover, setDeleteHover] = useState(false);
+  const overdue = isOverdue(todo);
 
   return (
     <li style={styles.item}>
@@ -15,6 +17,7 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
       <span style={{
         ...styles.title,
         ...(todo.is_completed ? styles.titleDone : {}),
+        ...(overdue ? styles.titleOverdue : {}),
       }}>
         {todo.title}
       </span>
@@ -56,6 +59,7 @@ const styles = {
   checkbox: { width: "16px", height: "16px", cursor: "pointer", flexShrink: 0 },
   title: { flex: 1, fontSize: "14px", color: "#111" },
   titleDone: { color: "#aaa", textDecoration: "line-through" },
+  titleOverdue: { color: "#d0453a", textDecoration: "line-through" },
   deadline: { fontSize: "12px", color: "#999", whiteSpace: "nowrap" },
   deleteBtn: {
     background: "#fff5f5", border: "1px solid #fcc", color: "#d0453a",

@@ -11,6 +11,7 @@ import { getTodos, createTodo, updateTodo, deleteTodo } from "../services/todoSe
 import { parseTask } from "../services/aiService";
 import * as authService from "../services/authService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { isOverdue } from "../utils/deadline";
 
 // HomePage chỉ làm 1 việc: ghép các component con thành trang chính, quản lý state task
 export default function HomePage() {
@@ -107,7 +108,7 @@ export default function HomePage() {
   const filteredTodos = useMemo(() => {
     switch (filter) {
       case "active":
-        return todos.filter((t) => !t.is_completed);
+        return todos.filter((t) => !t.is_completed && !isOverdue(t));
       case "done":
         return todos.filter((t) => t.is_completed);
       case "deadline":

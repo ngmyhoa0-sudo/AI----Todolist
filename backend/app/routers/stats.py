@@ -22,13 +22,15 @@ def get_stats(user=Depends(verify_token)):
 
     total = len(tasks)
     completed = len([t for t in tasks if t["is_completed"]])
-    active = total - completed
     overdue = len([
         t for t in tasks
         if not t["is_completed"]
         and t["deadline"]
         and _is_overdue(t["deadline"])
     ])
+    # "Đang làm" chỉ tính task chưa hoàn thành VÀ còn hạn — tách biệt hoàn toàn với "Quá hạn",
+    # khớp với danh sách hiển thị ở tab "Đang làm" trên frontend (total = completed + active + overdue)
+    active = total - completed - overdue
 
     return {
         "total": total,
