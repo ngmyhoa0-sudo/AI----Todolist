@@ -1,6 +1,7 @@
 import re
 import os
 import json
+import logging
 
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -10,12 +11,28 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
 from app.dependencies import verify_token
-from groq import Groq, APITimeoutError
+from groq import Groq, APITimeoutError, RateLimitError
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+logger = logging.getLogger("app.ai")
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=30.0)
 MODEL = "llama-3.3-70b-versatile"
+
+def _call_groq(prompt: str):
+    try:
+        return client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except APITimeoutError:
+        raise HTTPException(status_code=504, detail="AI phản hồi quá lâu, vui lòng thử lại sau.")
+    except RateLimitError as e:
+        logger.warning("Groq rate limit reached: %s", e)
+        raise HTTPException(status_code=429, detail="AI đang bị giới hạn số lượng yêu cầu (rate limit), vui lòng thử lại sau ít phút.")
+    except Exception as e:
+        logger.error("Groq API call failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
 
 # Thêm task bằng ngôn ngữ tự nhiên (tab "Ngôn ngữ tự nhiên")
 @router.post("/parse-task")
@@ -26,15 +43,7 @@ def parse_task(chat: ParseTaskRequest, user=Depends(verify_token)):
     {{"title": "tên task", "deadline": "YYYY-MM-DD hoặc null"}}
     Chỉ trả về JSON, không giải thích thêm.
     """
-    try:
-        res = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-    except APITimeoutError:
-        raise HTTPException(status_code=504, detail="AI phản hồi quá lâu, vui lòng thử lại sau.")
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
+    res = _call_groq(prompt)
 
     raw_text = res.choices[0].message.content.strip()
     raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
@@ -67,7 +76,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     [phạm vi hoạt động — BẮT BUỘC]
     Bạn CHỈ được hỗ trợ các việc liên quan tới quản lý task của người dùng: thêm/sửa/xoá/đánh dấu hoàn thành task, tra cứu/thống kê task hiện có, và trò chuyện ngắn gọn liên quan tới việc sắp xếp công việc.
     Bạn KHÔNG có kết nối tới bất kỳ nguồn dữ liệu thực tế nào bên ngoài hệ thống task (không có API thời tiết, tin tức, giá cả, tỷ số thể thao, sự kiện thời sự, hay bất kỳ thông tin cần cập nhật theo thời gian thực nào khác).
-    Nếu người dùng hỏi những điều NGOÀI PHẠM VI này (ví dụ: "thời tiết hôm nay thế nào", "có tin tức gì mới", hoặc các câu hỏi cần dữ liệu thực tế/thời sự mà bạn không thể kiểm chứng), TUYỆT ĐỐI KHÔNG được tự bịa ra câu trả lời như thể đó là sự thật (không bịa số liệu, dự báo, sự kiện...). Thay vào đó, trả về action "chat" và trả lời thẳng rằng bạn không có dữ liệu thật cho việc đó, chỉ hỗ trợ quản lý công việc, rồi hỏi lại xem người dùng có cần tạo/nhắc task gì không — KHÔNG được đưa ra bất kỳ thông tin cụ thể nào (số liệu, dự báo, tên riêng...) về chủ đề ngoài phạm vi đó.
+    Nếu người dùng hỏi những điều NGOÀI PHẠM VI này (ví dụ: "thời tiết hôm nay thế nào", "có tin tức gì mới", hoặc các câu hỏi cần dữ liệu thực tế/thời sự mà bạn không thể kiểm chứng), TUYỆT ĐỐI KHÔNG được tự bịa ra câu trả lời như thể đó là sự thật (không bịa số liệu, dự báo, sự kiện...). Thay vào đó, để "actions" là mảng rỗng và trả lời thẳng rằng bạn không có dữ liệu thật cho việc đó, chỉ hỗ trợ quản lý công việc, rồi hỏi lại xem người dùng có cần tạo/nhắc task gì không — KHÔNG được đưa ra bất kỳ thông tin cụ thể nào (số liệu, dự báo, tên riêng...) về chủ đề ngoài phạm vi đó.
 
     [context]
     Hôm nay là ngày: {today_str}
@@ -81,28 +90,32 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     Người dùng vừa nhắn: "{chat.message}"
 
     Quy tắc XÁC ĐỊNH tin nhắn hiện tại là TRẢ LỜI TIẾP THEO hay YÊU CẦU MỚI (xét TRƯỚC mọi quy tắc khác):
-    - Nếu tin nhắn cuối cùng của AI trong lịch sử ở trên là một câu HỎI LẠI (hỏi giờ, hỏi có muốn tạo task không, hỏi hạn chót...) VÀ tin nhắn "{chat.message}" hiện tại là câu trả lời NGẮN/PHỤ THUỘC vào câu hỏi đó (ví dụ chỉ là "có", "được", "ừ", một mốc giờ, một ngày...) — không tự nó là một yêu cầu rõ ràng, độc lập — thì đây là TRẢ LỜI TIẾP THEO: PHẢI kết hợp câu hỏi trước + câu trả lời hiện tại để suy ra đúng hành động (add_task/update_task/delete_task), TUYỆT ĐỐI KHÔNG hỏi lại vòng vo, KHÔNG trả lời "tôi không rõ bạn muốn gì" khi ngữ cảnh đã đủ rõ, và KHÔNG được lặp lại y nguyên câu hỏi đã hỏi trước đó.
+    - Nếu tin nhắn cuối cùng của AI trong lịch sử ở trên là một câu HỎI LẠI (hỏi giờ, hỏi có muốn tạo task không, hỏi hạn chót...) VÀ tin nhắn "{chat.message}" hiện tại là câu trả lời NGẮN/PHỤ THUỘC vào câu hỏi đó (ví dụ chỉ là "có", "được", "ừ", một mốc giờ, một ngày...) — không tự nó là một yêu cầu rõ ràng, độc lập — thì đây là TRẢ LỜI TIẾP THEO: PHẢI kết hợp câu hỏi trước + câu trả lời hiện tại để suy ra đúng hành động, TUYỆT ĐỐI KHÔNG hỏi lại vòng vo, KHÔNG trả lời "tôi không rõ bạn muốn gì" khi ngữ cảnh đã đủ rõ, và KHÔNG được lặp lại y nguyên câu hỏi đã hỏi trước đó.
       QUAN TRỌNG: sau khi kết hợp câu hỏi trước + câu trả lời hiện tại, VẪN PHẢI áp dụng đầy đủ "Quy tắc HỎI LẠI GIỜ" bên dưới trên phần thông tin đã kết hợp đó. Nếu ghép lại vẫn còn THIẾU giờ cụ thể (ví dụ câu hỏi trước hỏi "ngày ôn thi", người dùng chỉ trả lời ngày như "ngày kia" mà không nói giờ) thì KHÔNG được tự tạo/sửa task với giờ mặc định — PHẢI tiếp tục hỏi lại, lần này hỏi cụ thể phần còn thiếu (giờ), không hỏi lại toàn bộ câu hỏi cũ.
     - Ngược lại, nếu tin nhắn "{chat.message}" TỰ NÓ đã là một yêu cầu mới, rõ ràng, đầy đủ chủ ngữ/hành động (ví dụ bắt đầu bằng "tôi muốn...", "thêm task...", "xoá...", "sửa...", nói về một việc/chủ đề KHÁC với câu hỏi đang dang dở) thì đây là YÊU CẦU MỚI, ĐỘC LẬP: xử lý yêu cầu này riêng theo đúng các quy tắc phân loại bên dưới (kể cả quy tắc hỏi lại giờ nếu cần), và BỎ QUA câu hỏi cũ còn dang dở — không được trộn 2 yêu cầu vào chung 1 câu trả lời, không được nhắc lại câu hỏi cũ trong cùng phản hồi này.
 
-    Nếu người dùng cung cấp NHIỀU mốc giờ khác nhau cho cùng 1 việc lặp lại (ví dụ nhắc uống nước lúc 9h sáng, 12h trưa, 14h chiều), vì mỗi task chỉ lưu được 1 deadline duy nhất, hãy tạo task với deadline là mốc giờ GẦN NHẤT sắp tới, đặt "title" ghi rõ đầy đủ các mốc giờ (ví dụ "Uống nước (9h, 12h, 14h)"), và trong "reply" nói rõ đã đặt nhắc theo giờ nào, đồng thời hỏi người dùng có muốn tạo thêm task riêng cho các mốc còn lại không.
+    Quy tắc NHIỀU TASK TRONG 1 LƯỢT (quan trọng — trước đây hay bị sót task, giờ PHẢI làm đúng):
+    - Nếu người dùng cung cấp NHIỀU mốc giờ khác nhau cho CÙNG 1 việc lặp lại (ví dụ nhắc uống nước lúc 9h sáng, 12h trưa, 14h chiều — chỉ 1 tên việc), vì mỗi task chỉ lưu được 1 deadline duy nhất, hãy tạo 1 task DUY NHẤT với deadline là mốc giờ GẦN NHẤT sắp tới, đặt "title" ghi rõ đầy đủ các mốc giờ (ví dụ "Uống nước (9h, 12h, 14h)"), và trong "reply" nói rõ đã đặt nhắc theo giờ nào, đồng thời hỏi người dùng có muốn tạo thêm task riêng cho các mốc còn lại không.
+    - Nếu người dùng yêu cầu tạo/sửa/xoá NHIỀU task KHÁC TÊN/NỘI DUNG trong CÙNG 1 tin nhắn hoặc CÙNG 1 lượt trả lời tiếp theo (ví dụ "tạo lịch nhắc đi chợ và lịch đi thăm ông bà") — đây là NHIỀU task riêng biệt, không phải 1 task nhiều giờ như trên:
+      + Nếu đã có ĐỦ thông tin (tên + giờ cụ thể) cho TẤT CẢ các task đó, PHẢI đưa TẤT CẢ vào chung mảng "actions" trong CÙNG 1 lượt trả lời này — TUYỆT ĐỐI KHÔNG được chỉ tạo 1 cái rồi bỏ sót cái còn lại, KHÔNG được hứa "sẽ tạo 2 task" rồi chỉ thực hiện 1.
+      + Nếu có task nào trong số đó CÒN THIẾU giờ cụ thể, để "actions" rỗng và hỏi lại giờ cho TẤT CẢ các task còn thiếu trong CÙNG 1 câu hỏi (không hỏi từng cái một qua nhiều lượt).
 
     [task]
-    Xác định người dùng đang muốn 1 trong 4 việc sau:
+    Xác định người dùng đang muốn 1 hoặc nhiều trong các việc sau, cho MỖI task liên quan:
     (a) THÊM task mới
     (b) SỬA task đã có (đổi tên, đổi deadline, HOẶC đánh dấu đã hoàn thành / chưa hoàn thành)
     (c) XOÁ task đã có
-    (d) Chỉ hỏi đáp/trò chuyện thông thường
+    (d) Chỉ hỏi đáp/trò chuyện thông thường (không có task nào cần thêm/sửa/xoá)
 
     Nếu người dùng nói đã làm xong / hoàn thành 1 task, đây CŨNG LÀ (b) SỬA, với is_completed = true.
 
-    Quy tắc quan trọng: nếu người dùng chỉ ĐỀ CẬP tới 1 sự kiện/deadline sắp tới (ví dụ "tôi sắp có bài kiểm tra") nhưng KHÔNG yêu cầu rõ ràng bằng các từ như "thêm/tạo/nhắc/lên lịch", hãy trả về action "chat" và HỎI LẠI xem người dùng có muốn tạo task nhắc lịch cho việc đó không, thay vì tự ý thêm task hoặc chỉ động viên suông.
+    Quy tắc quan trọng: nếu người dùng chỉ ĐỀ CẬP tới 1 sự kiện/deadline sắp tới (ví dụ "tôi sắp có bài kiểm tra") nhưng KHÔNG yêu cầu rõ ràng bằng các từ như "thêm/tạo/nhắc/lên lịch", để "actions" rỗng và HỎI LẠI xem người dùng có muốn tạo task nhắc lịch cho việc đó không, thay vì tự ý thêm task hoặc chỉ động viên suông.
 
     Quy tắc HỎI LẠI GIỜ (áp dụng cho (a) và (b), xét TRƯỚC khi tính deadline — phân loại theo BẢN CHẤT câu yêu cầu, KHÔNG theo việc đó "quan trọng" hay "vặt"):
 
-    1) Việc mang tính NHẮC NHỞ/LỊCH TRÌNH — chỉ có tác dụng nếu làm ĐÚNG giờ (nhắc uống nước lúc mấy giờ, uống thuốc, họp, báo thức, việc lặp lại hàng ngày, lịch học/lịch hẹn...). Nếu người dùng KHÔNG nói giờ cụ thể — kể cả khi chỉ nói buổi chung chung (sáng/trưa/chiều/tối/đêm), hoặc chỉ nói NGÀY (hôm nay/ngày mai/thứ mấy) mà không kèm số giờ nào cả — vẫn tính là CHƯA có giờ cụ thể. TUYỆT ĐỐI KHÔNG tự suy đoán giờ (theo buổi hay theo giờ mặc định cuối ngày). Phải trả về action "chat" và hỏi lại giờ chính xác trước khi tạo/sửa task.
+    1) Việc mang tính NHẮC NHỞ/LỊCH TRÌNH — chỉ có tác dụng nếu làm ĐÚNG giờ (nhắc uống nước lúc mấy giờ, uống thuốc, họp, báo thức, việc lặp lại hàng ngày, lịch học/lịch hẹn...). Nếu người dùng KHÔNG nói giờ cụ thể — kể cả khi chỉ nói buổi chung chung (sáng/trưa/chiều/tối/đêm), hoặc chỉ nói NGÀY (hôm nay/ngày mai/thứ mấy) mà không kèm số giờ nào cả — vẫn tính là CHƯA có giờ cụ thể. TUYỆT ĐỐI KHÔNG tự suy đoán giờ (theo buổi hay theo giờ mặc định cuối ngày). Để "actions" rỗng và hỏi lại giờ chính xác trước khi tạo/sửa task.
 
-    2) Việc có DEADLINE/HẠN CHÓT (nộp bài, deadline nhóm, thi cử...). Nếu người dùng không nói rõ hạn chót là ngày giờ nào, trả về action "chat" và hỏi rõ hạn chót. Nếu người dùng có nhắc tới CẢ mốc bắt đầu lẫn hạn chót, PHẢI hỏi lại để làm rõ (ví dụ xác nhận muốn tạo task theo mốc nào, hoặc tạo riêng từng mốc) — TUYỆT ĐỐI không tự gộp 2 mốc lại thành 1 giá trị deadline duy nhất.
+    2) Việc có DEADLINE/HẠN CHÓT (nộp bài, deadline nhóm, thi cử...). Nếu người dùng không nói rõ hạn chót là ngày giờ nào, để "actions" rỗng và hỏi rõ hạn chót. Nếu người dùng có nhắc tới CẢ mốc bắt đầu lẫn hạn chót, PHẢI hỏi lại để làm rõ (ví dụ xác nhận muốn tạo task theo mốc nào, hoặc tạo riêng từng mốc) — TUYỆT ĐỐI không tự gộp 2 mốc lại thành 1 giá trị deadline duy nhất.
 
     3) Việc KHÔNG quan trọng làm lúc nào trong ngày (ví dụ "dọn phòng", "đọc sách" nói kiểu ngẫu hứng, không phải một cuộc hẹn/lịch trình cố định) — chỉ loại này mới được dùng giờ mặc định, không cần hỏi lại:
        - Nếu có kèm buổi chung chung (sáng/trưa/chiều/tối/đêm) nhưng không có số giờ cụ thể, dùng quy ước: sáng=08:00, trưa=12:00, chiều=15:00, tối=19:00, đêm=22:00.
@@ -120,82 +133,84 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     - Nếu người dùng nói thời gian tương đối theo PHÚT/GIỜ kể từ bây giờ (ví dụ "trong 2 phút nữa", "sau 1 tiếng nữa"), cộng thêm đúng số phút/giờ đó vào giờ hiện tại ({now_str}) cùng ngày {today_str} để tính deadline chính xác. Ví dụ minh hoạ cách tính (không phải giờ thật): nếu giờ hiện tại là 05:30 và người dùng nói "trong 2 phút nữa", deadline sẽ là 05:32 cùng ngày.
     - Nếu nói rõ số giờ kèm buổi (ví dụ "2 giờ chiều"), đổi đúng sang giờ 24h (2 giờ chiều = 14:00).
 
-    Quy tắc cho (b) và (c): PHẢI tìm đúng task trong danh sách ở trên dựa vào tên gần giống nhất, rồi lấy đúng trường "id" của nó để đưa vào "task_id". TUYỆT ĐỐI không tự bịa số id. Nếu không tìm thấy task nào khớp, trả về action "chat" và giải thích cho người dùng là không tìm thấy task đó.
+    Quy tắc cho (b) và (c): PHẢI tìm đúng task trong danh sách ở trên dựa vào tên gần giống nhất, rồi lấy đúng trường "id" của nó để đưa vào "task_id". TUYỆT ĐỐI không tự bịa số id. Nếu không tìm thấy task nào khớp, để "actions" rỗng và giải thích cho người dùng là không tìm thấy task đó.
 
     [examples]
     Người dùng: "thêm task học tiếng Anh ngày mai"
-    → {{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str} 23:59", "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
+    → {{"actions": [{{"action": "add_task", "title": "Học tiếng Anh", "deadline": "{tomorrow_str} 23:59"}}], "reply": "Đã thêm task \\"Học tiếng Anh\\", hạn ngày mai nhé!"}}
 
     Người dùng: "check email trong 2 phút nữa"
     → tính deadline bằng giờ hiện tại {now_str} cộng thêm 2 phút, cùng ngày {today_str}
-    → {{"action": "add_task", "title": "Check email", "deadline": "<giờ tính được>", "reply": "Đã thêm task \\"Check email\\", hạn trong 2 phút nữa nhé!"}}
+    → {{"actions": [{{"action": "add_task", "title": "Check email", "deadline": "<giờ tính được>"}}], "reply": "Đã thêm task \\"Check email\\", hạn trong 2 phút nữa nhé!"}}
 
     Người dùng: "tôi cần uống 8 cốc nước hôm nay" (mục tiêu cả ngày, không phải nhắc đúng 1 thời điểm)
-    → {{"action": "add_task", "title": "Uống 8 cốc nước", "deadline": "{today_str} 23:59", "reply": "Đã thêm task \\"Uống 8 cốc nước\\", cố gắng hoàn thành trong hôm nay nhé!"}}
+    → {{"actions": [{{"action": "add_task", "title": "Uống 8 cốc nước", "deadline": "{today_str} 23:59"}}], "reply": "Đã thêm task \\"Uống 8 cốc nước\\", cố gắng hoàn thành trong hôm nay nhé!"}}
 
     Người dùng: "thêm task nhắc nhở tối nay tôi có lịch học" (nhắc nhở/lịch trình, chỉ nói buổi "tối" chung chung, không có giờ cụ thể → PHẢI hỏi lại, không tự đoán 19:00)
-    → {{"action": "chat", "reply": "Lịch học tối nay của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
+    → {{"actions": [], "reply": "Lịch học tối nay của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
 
     Người dùng: "nhắc tôi uống thuốc lúc 8 giờ tối" (nhắc nhở nhưng ĐÃ CÓ giờ cụ thể → thêm trực tiếp)
-    → {{"action": "add_task", "title": "Uống thuốc", "deadline": "{today_str} 20:00", "reply": "Đã thêm task \\"Uống thuốc\\", nhắc lúc 20:00 tối nay nhé!"}}
+    → {{"actions": [{{"action": "add_task", "title": "Uống thuốc", "deadline": "{today_str} 20:00"}}], "reply": "Đã thêm task \\"Uống thuốc\\", nhắc lúc 20:00 tối nay nhé!"}}
 
     Người dùng: "tôi muốn tạo một task nhắc lịch học cho ngày mai" (chỉ nói NGÀY "ngày mai", không có giờ → vẫn phải hỏi lại giờ, dù có nói ngày)
-    → {{"action": "chat", "reply": "Lịch học ngày mai của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
+    → {{"actions": [], "reply": "Lịch học ngày mai của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
 
     (Ví dụ về YÊU CẦU MỚI đè lên câu hỏi cũ dang dở) Lịch sử: AI vừa hỏi "Bạn muốn nhắc mình uống nước vào mấy giờ mỗi ngày vậy?" nhưng chưa được trả lời rõ. Người dùng nhắn tiếp: "tôi muốn tạo một task nhắc lịch học cho ngày mai" — đây là yêu cầu MỚI, rõ ràng, khác chủ đề, KHÔNG phải câu trả lời cho câu hỏi uống nước → xử lý độc lập theo đúng quy tắc hỏi giờ ở trên, KHÔNG nhắc gì tới câu hỏi uống nước trong câu trả lời này
-    → {{"action": "chat", "reply": "Lịch học ngày mai của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
+    → {{"actions": [], "reply": "Lịch học ngày mai của bạn là mấy giờ vậy, để mình nhắc đúng giờ nhé?"}}
 
     (Ví dụ ghép câu hỏi trước + câu trả lời NHƯNG vẫn thiếu giờ → phải hỏi tiếp, không tự tạo task) Lịch sử: AI vừa hỏi "Bạn có muốn mình tạo 1 task nhắc lịch ôn thi cho kỳ thi không? Nếu có, cho mình biết ngày ôn thi nhé!". Người dùng trả lời: "ngày kia" — đây CHỈ có ngày, CHƯA có giờ → theo Quy tắc HỎI LẠI GIỜ mục (1), vẫn phải hỏi tiếp giờ, KHÔNG được tự thêm task với giờ mặc định
-    → {{"action": "chat", "reply": "Bạn muốn ôn thi vào lúc mấy giờ ngày kia ({day_after_tomorrow_str}) vậy, để mình nhắc đúng giờ nhé?"}}
+    → {{"actions": [], "reply": "Bạn muốn ôn thi vào lúc mấy giờ ngày kia ({day_after_tomorrow_str}) vậy, để mình nhắc đúng giờ nhé?"}}
+
+    (Ví dụ NHIỀU TASK KHÁC TÊN trong 1 lượt — đây là case hay bị làm sai trước đây, PHẢI tạo đủ CẢ HAI) Người dùng: "tôi muốn tạo lịch nhắc đi chợ và lịch đi thăm ông bà". AI hỏi lại giờ cho cả 2 việc, người dùng trả lời: "đi chợ là 10h ngày mai còn đi thăm ông bà là 9h ngày kia" — đã đủ giờ cho CẢ 2 task → PHẢI đưa CẢ 2 vào chung mảng actions, KHÔNG được chỉ tạo 1 cái
+    → {{"actions": [
+        {{"action": "add_task", "title": "Đi chợ", "deadline": "{tomorrow_str} 10:00"}},
+        {{"action": "add_task", "title": "Đi thăm ông bà", "deadline": "{day_after_tomorrow_str} 09:00"}}
+      ], "reply": "Đã thêm 2 task: \\"Đi chợ\\" lúc 10h ngày mai, và \\"Đi thăm ông bà\\" lúc 9h ngày kia nhé!"}}
 
     Người dùng: "tôi có deadline nộp báo cáo" (có hạn chót nhưng không nói rõ ngày giờ → phải hỏi lại)
-    → {{"action": "chat", "reply": "Hạn nộp báo cáo là ngày giờ nào vậy bạn? Cho mình biết để tạo task nhé."}}
+    → {{"actions": [], "reply": "Hạn nộp báo cáo là ngày giờ nào vậy bạn? Cho mình biết để tạo task nhé."}}
 
     Người dùng: "bài tập nhóm bắt đầu làm thứ 2, nộp thứ 6" (có cả mốc bắt đầu và hạn chót → không tự gộp, phải hỏi rõ)
-    → {{"action": "chat", "reply": "Bạn muốn mình tạo task theo hạn nộp (thứ 6) hay tạo riêng cả mốc bắt đầu (thứ 2) và hạn nộp? Cho mình biết giờ cụ thể của mốc bạn muốn nhé."}}
+    → {{"actions": [], "reply": "Bạn muốn mình tạo task theo hạn nộp (thứ 6) hay tạo riêng cả mốc bắt đầu (thứ 2) và hạn nộp? Cho mình biết giờ cụ thể của mốc bạn muốn nhé."}}
 
     Người dùng: "tôi sắp có bài kiểm tra toán"
-    → {{"action": "chat", "reply": "Bạn có muốn mình tạo 1 task nhắc lịch ôn thi cho bài kiểm tra toán không? Nếu có, cho mình biết ngày thi nhé!"}}
+    → {{"actions": [], "reply": "Bạn có muốn mình tạo 1 task nhắc lịch ôn thi cho bài kiểm tra toán không? Nếu có, cho mình biết ngày thi nhé!"}}
 
     Người dùng: "sửa cuộc họp thành 3 giờ chiều mai" (giả sử tìm thấy task "Cuộc họp" có id là 7 trong danh sách)
-    → {{"action": "update_task", "task_id": 7, "deadline": "{tomorrow_str} 15:00", "reply": "Đã sửa deadline \\"Cuộc họp\\" sang 3 giờ chiều mai nhé!"}}
+    → {{"actions": [{{"action": "update_task", "task_id": 7, "deadline": "{tomorrow_str} 15:00"}}], "reply": "Đã sửa deadline \\"Cuộc họp\\" sang 3 giờ chiều mai nhé!"}}
 
     Người dùng: "xoá task cuộc họp đi"  (giả sử tìm thấy task "Cuộc họp" có id là 7 trong danh sách)
-    → {{"action": "delete_task", "task_id": 7, "reply": "Đã xoá task \\"Cuộc họp\\" nhé!"}}
+    → {{"actions": [{{"action": "delete_task", "task_id": 7}}], "reply": "Đã xoá task \\"Cuộc họp\\" nhé!"}}
 
     Người dùng: "tôi còn bao nhiêu task chưa xong"
-    → {{"action": "chat", "reply": "Bạn còn 2 task chưa hoàn thành: ..."}}
+    → {{"actions": [], "reply": "Bạn còn 2 task chưa hoàn thành: ..."}}
 
     Người dùng: "hôm nay thời tiết thế nào?" (câu hỏi NGOÀI PHẠM VI, cần dữ liệu thực tế mà bạn không có → KHÔNG bịa dự báo, phải từ chối rõ ràng)
-    → {{"action": "chat", "reply": "Mình chỉ hỗ trợ quản lý công việc thôi, không có dữ liệu thời tiết thực tế đâu nhé. Bạn có cần mình nhắc gì không?"}}
+    → {{"actions": [], "reply": "Mình chỉ hỗ trợ quản lý công việc thôi, không có dữ liệu thời tiết thực tế đâu nhé. Bạn có cần mình nhắc gì không?"}}
 
     Người dùng: "có tin tức gì mới không?" (ngoài phạm vi, tương tự → từ chối, không bịa)
-    → {{"action": "chat", "reply": "Mình không có dữ liệu tin tức thật đâu, chỉ hỗ trợ quản lý task thôi. Bạn cần mình giúp gì về công việc không?"}}
+    → {{"actions": [], "reply": "Mình không có dữ liệu tin tức thật đâu, chỉ hỗ trợ quản lý task thôi. Bạn cần mình giúp gì về công việc không?"}}
 
     Người dùng: "tôi đã hoàn thành học bài rồi" (giả sử tìm thấy task "Học bài" có id là 9 trong danh sách)
-    → {{"action": "update_task", "task_id": 9, "is_completed": true, "reply": "Tuyệt vời! Đã đánh dấu \\"Học bài\\" hoàn thành nhé!"}}
+    → {{"actions": [{{"action": "update_task", "task_id": 9, "is_completed": true}}], "reply": "Tuyệt vời! Đã đánh dấu \\"Học bài\\" hoàn thành nhé!"}}
 
     [format]
-    Chỉ trả về DUY NHẤT 1 dòng JSON hợp lệ theo đúng 1 trong 4 cấu trúc:
-    - Thêm: {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD HH:MM hoặc null", "reply": "..."}}
-    - Sửa: {{"action": "update_task", "task_id": <số>, "title": "... hoặc null", "deadline": "YYYY-MM-DD HH:MM hoặc null", "is_completed": true/false/null, "reply": "..."}}
-    - Xoá: {{"action": "delete_task", "task_id": <số>, "reply": "..."}}
-    - Trò chuyện: {{"action": "chat", "reply": "..."}}
+    Chỉ trả về DUY NHẤT 1 dòng JSON hợp lệ theo đúng cấu trúc sau — "actions" LUÔN là 1 mảng (có thể rỗng nếu chỉ trò chuyện/hỏi lại, có thể có nhiều phần tử nếu người dùng yêu cầu nhiều task cùng lúc):
+    {{
+      "actions": [
+        {{"action": "add_task", "title": "...", "deadline": "YYYY-MM-DD HH:MM hoặc null"}},
+        {{"action": "update_task", "task_id": <số>, "title": "... hoặc null", "deadline": "YYYY-MM-DD HH:MM hoặc null", "is_completed": true/false/null}},
+        {{"action": "delete_task", "task_id": <số>}}
+      ],
+      "reply": "..."
+    }}
     Không thêm chữ giải thích, không bọc trong dấu ```.
 
     [tone]
     Giọng văn ngắn gọn, tích cực, khích lệ, giống một trợ lý cá nhân đáng tin cậy.
     """
 
-    try:
-        res = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-    except APITimeoutError:
-        raise HTTPException(status_code=504, detail="AI phản hồi quá lâu, vui lòng thử lại sau.")
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Không thể kết nối tới AI: {e}")
+    res = _call_groq(prompt)
 
     raw_text = res.choices[0].message.content.strip()
     raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
@@ -206,47 +221,60 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     try:
         parsed = json.loads(raw_text)
         reply_text = parsed.get("reply", raw_text)
-    except (json.JSONDecodeError, TypeError, AttributeError):
+    except (json.JSONDecodeError, TypeError, AttributeError) as e:
+        logger.warning("Groq tra ve JSON khong hop le (%s). Raw response: %r", e, raw_text)
         parsed = None  # AI không trả về JSON hợp lệ thì giữ nguyên raw_text làm câu trả lời
 
     if parsed:
-        action = parsed.get("action")
-        try:
-            if action == "add_task" and parsed.get("title"):
-                deadline = parsed.get("deadline")
-                if isinstance(deadline, str) and deadline.strip().lower() == "null":
-                    deadline = None
-                supabase.table("tasks").insert({
-                    "title": parsed["title"],
-                    "deadline": deadline,
-                    "user_id": user["id"],
-                    "is_completed": False
-                }).execute()
-                task_added = True
+        actions = parsed.get("actions")
+        if not isinstance(actions, list):
+            actions = []
+        failed_count = 0
 
-            elif action == "update_task" and parsed.get("task_id"):
-                update_data = {}
-                title = parsed.get("title")
-                if isinstance(title, str) and title.strip().lower() != "null" and title.strip():
-                    update_data["title"] = title
-                deadline = parsed.get("deadline")
-                if isinstance(deadline, str) and deadline.strip().lower() != "null" and deadline.strip():
-                    update_data["deadline"] = deadline
-                is_completed = parsed.get("is_completed")
-                if isinstance(is_completed, bool):
-                    update_data["is_completed"] = is_completed
-                if update_data:
-                    supabase.table("tasks").update(update_data) \
-                        .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
+        for item in actions:
+            if not isinstance(item, dict):
+                continue
+            action = item.get("action")
+            try:
+                if action == "add_task" and item.get("title"):
+                    deadline = item.get("deadline")
+                    if isinstance(deadline, str) and deadline.strip().lower() == "null":
+                        deadline = None
+                    supabase.table("tasks").insert({
+                        "title": item["title"],
+                        "deadline": deadline,
+                        "user_id": user["id"],
+                        "is_completed": False
+                    }).execute()
                     task_added = True
 
-            elif action == "delete_task" and parsed.get("task_id"):
-                supabase.table("tasks").delete() \
-                    .eq("id", parsed["task_id"]).eq("user_id", user["id"]).execute()
-                task_added = True
+                elif action == "update_task" and item.get("task_id"):
+                    update_data = {}
+                    title = item.get("title")
+                    if isinstance(title, str) and title.strip().lower() != "null" and title.strip():
+                        update_data["title"] = title
+                    deadline = item.get("deadline")
+                    if isinstance(deadline, str) and deadline.strip().lower() != "null" and deadline.strip():
+                        update_data["deadline"] = deadline
+                    is_completed = item.get("is_completed")
+                    if isinstance(is_completed, bool):
+                        update_data["is_completed"] = is_completed
+                    if update_data:
+                        supabase.table("tasks").update(update_data) \
+                            .eq("id", item["task_id"]).eq("user_id", user["id"]).execute()
+                        task_added = True
 
-        except Exception:
-            # Lỗi khi ghi Supabase: vẫn giữ câu trả lời AI đã sinh ra, chỉ báo thêm là chưa lưu được thay đổi
+                elif action == "delete_task" and item.get("task_id"):
+                    supabase.table("tasks").delete() \
+                        .eq("id", item["task_id"]).eq("user_id", user["id"]).execute()
+                    task_added = True
+
+            except Exception as e:
+                logger.error("Loi khi thuc thi action %r: %s", item, e, exc_info=True)
+                failed_count += 1
+
+        if failed_count:
+            # Lỗi khi ghi Supabase: vẫn giữ câu trả lời AI đã sinh ra, chỉ báo thêm là có phần chưa lưu được
             reply_text += "\n\n(Lưu ý: có lỗi khi cập nhật task, vui lòng thử lại.)"
 
     try:
