@@ -2,9 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { askAI } from "../services/aiService";
 import { getChatHistory } from "../services/chatHistoryService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { useTaskRefresh } from "../context/TaskRefreshContext";
 
 // ChatBox chỉ làm 1 việc: giao diện chatbot AI, tự gọi aiService
-export default function ChatBox({ onTaskAdded }) {
+export default function ChatBox() {
+    const { bump } = useTaskRefresh();
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
@@ -44,7 +46,7 @@ export default function ChatBox({ onTaskAdded }) {
             const reply = res.data.reply;
             setMessages((prev) => [...prev, { role: "ai", content: reply }]);
             if (res.data.task_added) {
-                onTaskAdded?.();
+                bump();
             }
         } catch (err) {
             setError(getErrorMessage(err));
