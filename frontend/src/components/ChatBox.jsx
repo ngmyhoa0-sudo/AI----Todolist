@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { askAI } from "../services/aiService";
 import { getChatHistory } from "../services/chatHistoryService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 // ChatBox chỉ làm 1 việc: giao diện chatbot AI, tự gọi aiService
 export default function ChatBox({ onTaskAdded }) {
@@ -46,7 +47,7 @@ export default function ChatBox({ onTaskAdded }) {
                 onTaskAdded?.();
             }
         } catch (err) {
-            setError(err.message || "Không nhận được phản hồi từ AI. Thử lại nhé.");
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
