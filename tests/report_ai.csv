@@ -1,0 +1,9 @@
+﻿Test Case,Precondition,Action,Expected,Actual,Kết quả
+TC-AI-01,AI trả về 1 action add_task,POST /ai/chat,task_added=True,True,PASS
+TC-AI-02,AI trả về actions rỗng (chỉ hỏi đáp),POST /ai/chat,task_added=False,False,PASS
+TC-AI-03,AI trả về mảng 2 actions add_task,POST /ai/chat,>=2 lần insert,3,PASS
+TC-AI-04,AI trả về action update_task đổi deadline,POST /ai/chat,task_added=True,True,PASS
+TC-AI-05,AI trả về action update_task is_completed=true,POST /ai/chat,task_added=True,True,PASS
+TC-AI-06,AI trả về action delete_task,POST /ai/chat,task_added=True,True,PASS
+TC-AI-07,Groq API timeout khi đang xử lý,POST /ai/chat,504,504,PASS
+TC-AI-08,AI trích xuất đúng tên task từ ngôn ngữ tự nhiên,POST /ai/parse-task,200,200,PASS
