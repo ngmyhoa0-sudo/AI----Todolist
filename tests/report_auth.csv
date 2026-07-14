@@ -1,0 +1,9 @@
+﻿Test Case,Precondition,Action,Expected Status,Actual Status,Kết quả
+TC-AUTH-01,Email chưa tồn tại,POST /auth/register,200,200,PASS
+TC-AUTH-02,Email đã tồn tại,POST /auth/register,400,400,PASS
+TC-AUTH-03,Email/mật khẩu đúng,POST /auth/login,200,200,PASS
+TC-AUTH-04,Mật khẩu sai,POST /auth/login,401,401,PASS
+TC-AUTH-05,"Chưa đăng nhập, bấm 'Dùng thử với tư cách khách'",POST /auth/guest,200,200,PASS
+TC-AUTH-06,Supabase chưa bật Anonymous Sign-in,POST /auth/guest,500,500,PASS
+TC-AUTH-07,Refresh token còn hợp lệ,POST /auth/refresh,200,200,PASS
+TC-AUTH-08,Refresh token đã hết hạn/không hợp lệ,POST /auth/refresh,401,401,PASS
