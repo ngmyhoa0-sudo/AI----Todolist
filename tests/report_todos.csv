@@ -1,0 +1,15 @@
+﻿Test Case,Precondition,Action,Expected Status,Actual Status,Kết quả
+TC-TODO-01,User chưa có task nào,GET /todos,200,200,PASS
+TC-TODO-02,User đã có 1 task,GET /todos,200,200,PASS
+TC-TODO-03,Token/phiên đã hết hạn giữa chừng,GET /todos,401,401,PASS
+TC-TODO-04,Lỗi kết nối database không liên quan RLS,GET /todos,500,500,PASS
+TC-TODO-05,Nhập tên task + deadline hợp lệ,POST /todos,200,200,PASS
+TC-TODO-06,"Nhập tên task, bỏ trống deadline",POST /todos,200,200,PASS
+TC-TODO-07,Tên task chỉ có khoảng trắng,POST /todos,422,422,PASS
+TC-TODO-08,Tên task chỉ toàn ký tự đặc biệt,POST /todos,422,422,PASS
+TC-TODO-09,Token/phiên đã hết hạn khi đang thêm task,POST /todos,401,401,PASS
+TC-TODO-10,"Task đã tồn tại, đổi tên hợp lệ",PUT /todos/1,200,200,PASS
+TC-TODO-11,Đánh dấu task đã hoàn thành,PUT /todos/1,200,200,PASS
+TC-TODO-12,Sửa tên task thành chuỗi rỗng,PUT /todos/1,422,422,PASS
+TC-TODO-13,Task tồn tại và thuộc về user,DELETE /todos/1,200,200,PASS
+TC-TODO-14,Token/phiên đã hết hạn khi đang xoá task,DELETE /todos/1,401,401,PASS
