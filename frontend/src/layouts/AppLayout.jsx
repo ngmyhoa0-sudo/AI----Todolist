@@ -44,7 +44,7 @@ export default function AppLayout() {
 const styles = {
     page: {
         minHeight: "100vh",
-        backgroundColor: "#f7f7f5",
+        backgroundColor: "#E3F2FD",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
     },
     nav: {
