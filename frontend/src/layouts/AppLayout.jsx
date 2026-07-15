@@ -1,15 +1,17 @@
 import { Outlet, NavLink } from "react-router-dom";
 import ChatPanel from "../components/ChatPanel";
+import { useLanguage } from "../context/LanguageContext";
 
-const NAV_ITEMS = [
-    { to: "/home", label: "Việc cần làm" },
-    { to: "/calendar", label: "Lịch" },
-    { to: "/stats", label: "Thống kê" },
-    { to: "/account", label: "Tài khoản" },
-];
-
-// AppLayout chỉ làm 1 việc: khung chung cho các trang sau đăng nhập (nav + chat nổi + nội dung trang)
 export default function AppLayout() {
+    const { t } = useLanguage();
+
+    const NAV_ITEMS = [
+        { to: "/home", label: t("navTasks") },
+        { to: "/calendar", label: t("navCalendar") },
+        { to: "/stats", label: t("navStats") },
+        { to: "/account", label: t("navAccount") },
+    ];
+
     return (
         <div style={styles.page}>
             <nav style={styles.nav}>
@@ -58,31 +60,12 @@ const styles = {
         flexWrap: "wrap",
         gap: "12px",
     },
-    brand: {
-        fontSize: "18px",
-        fontWeight: "700",
-        color: "#111",
-    },
-    links: {
-        display: "flex",
-        gap: "6px",
-        flexWrap: "wrap",
-    },
+    brand: { fontSize: "18px", fontWeight: "700", color: "#111" },
+    links: { display: "flex", gap: "6px", flexWrap: "wrap" },
     link: {
-        padding: "8px 14px",
-        borderRadius: "7px",
-        fontSize: "14px",
-        color: "#888",
-        textDecoration: "none",
-        fontWeight: "500",
+        padding: "8px 14px", borderRadius: "7px", fontSize: "14px",
+        color: "#888", textDecoration: "none", fontWeight: "500",
     },
-    linkActive: {
-        backgroundColor: "#111",
-        color: "#fff",
-    },
-    content: {
-        maxWidth: "640px",
-        margin: "0 auto",
-        padding: "24px 16px",
-    },
+    linkActive: { backgroundColor: "#111", color: "#fff" },
+    content: { maxWidth: "640px", margin: "0 auto", padding: "24px 16px" },
 };

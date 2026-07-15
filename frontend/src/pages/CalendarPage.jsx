@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { getTodos } from "../services/todoService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { useLanguage } from "../context/LanguageContext";
 
 const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
@@ -21,6 +22,7 @@ function buildMonthGrid(year, month) {
 }
 
 export default function CalendarPage() {
+    const { t } = useLanguage();
     const [todos, setTodos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -69,7 +71,7 @@ export default function CalendarPage() {
 
     return (
         <div>
-            <h1 style={styles.title}>Lịch</h1>
+            <h1 style={styles.title}>{t("calendarPageTitle")}</h1>
 
             {loading && <p style={styles.loading}>Đang tải...</p>}
             {error && <p style={styles.error}>{error}</p>}

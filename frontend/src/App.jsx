@@ -7,23 +7,25 @@ import StatsPage from "./pages/StatsPage";
 import AccountPage from "./pages/AccountPage";
 import AppLayout from "./layouts/AppLayout";
 import { TaskRefreshProvider } from "./context/TaskRefreshContext";
+import { LanguageProvider } from "./context/LanguageContext";
 
-// App.jsx chỉ làm 1 việc: điều hướng giữa các trang
 function App() {
     return (
         <BrowserRouter>
-            <TaskRefreshProvider>
-                <Routes>
-                    <Route path="/" element={<LoginPage />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route element={<AppLayout />}>
-                        <Route path="/home" element={<TasksPage />} />
-                        <Route path="/calendar" element={<CalendarPage />} />
-                        <Route path="/stats" element={<StatsPage />} />
-                        <Route path="/account" element={<AccountPage />} />
-                    </Route>
-                </Routes>
-            </TaskRefreshProvider>
+            <LanguageProvider>
+                <TaskRefreshProvider>
+                    <Routes>
+                        <Route path="/" element={<LoginPage />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route element={<AppLayout />}>
+                            <Route path="/home" element={<TasksPage />} />
+                            <Route path="/calendar" element={<CalendarPage />} />
+                            <Route path="/stats" element={<StatsPage />} />
+                            <Route path="/account" element={<AccountPage />} />
+                        </Route>
+                    </Routes>
+                </TaskRefreshProvider>
+            </LanguageProvider>
         </BrowserRouter>
     );
 }

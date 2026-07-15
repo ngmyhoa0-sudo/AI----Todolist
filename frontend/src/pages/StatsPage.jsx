@@ -1,12 +1,14 @@
 import StatsCard from "../components/StatsCard";
 import StatsChart from "../components/StatsChart";
 import { useTaskRefresh } from "../context/TaskRefreshContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function StatsPage() {
     const { version } = useTaskRefresh();
+    const { t } = useLanguage();
     return (
         <div>
-            <h1 style={styles.title}>Thống kê</h1>
+            <h1 style={styles.title}>{t("statsPageTitle")}</h1>
             <StatsCard refreshTrigger={version} />
             <StatsChart refreshTrigger={version} />
         </div>

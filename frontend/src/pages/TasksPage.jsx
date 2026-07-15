@@ -8,11 +8,13 @@ import { parseTask } from "../services/aiService";
 import { getErrorMessage } from "../utils/errorMessage";
 import { isOverdue } from "../utils/deadline";
 import { useTaskRefresh } from "../context/TaskRefreshContext";
+import { useLanguage } from "../context/LanguageContext";
 
 // TasksPage chỉ làm 1 việc: quản lý và hiển thị danh sách task
 export default function TasksPage() {
     const { version } = useTaskRefresh();
 
+    const { t } = useLanguage();
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
     const [loading, setLoading] = useState(true);
@@ -114,7 +116,7 @@ export default function TasksPage() {
     return (
         <div>
             <div style={styles.header}>
-                <h1 style={styles.title}>Việc cần làm</h1>
+                <h1 style={styles.title}>{t("taskPageTitle")}</h1>
                 {isGuest && <span style={styles.guestBadge}>Chế độ khách</span>}
             </div>
 
