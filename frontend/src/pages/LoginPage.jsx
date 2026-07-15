@@ -173,7 +173,7 @@ const styles = {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f7f7f5",
+        backgroundColor: "#E3F2FD",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         padding: "16px",
     },
