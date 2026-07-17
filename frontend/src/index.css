@@ -9,3 +9,11 @@ body {
   background-color: #f7f7f5;
   color: #111;
 }
+
+.login-input::placeholder {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.login-submit-btn:hover {
+    transform: scale(1.03);
+}

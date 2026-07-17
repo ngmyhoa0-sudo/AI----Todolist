@@ -66,6 +66,25 @@ export default function LoginPage() {
 
     return (
         <div style={styles.page}>
+            <svg
+                style={styles.waveSvg}
+                viewBox="0 0 1200 800"
+                preserveAspectRatio="xMidYMid slice"
+            >
+                <defs>
+                    <filter id="waveBlur" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="45" />
+                    </filter>
+                    <path
+                        id="gentle-wave"
+                        d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v300h-352z"
+                    />
+                </defs>
+                <g transform="translate(0, 500) scale(3.2)">
+                    <use href="#gentle-wave" x="0" y="0" fill="#ffffff" fillOpacity="0.35" filter="url(#waveBlur)" />
+                    <use href="#gentle-wave" x="88" y="10" fill="#ffffff" fillOpacity="0.25" filter="url(#waveBlur)" />
+                </g>
+            </svg>
             <div style={styles.card}>
                 <div style={styles.header}>
                     <span style={styles.logo}>✓</span>
@@ -90,42 +109,69 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit} style={styles.form}>
                     <label style={styles.label}>Email</label>
-                    <input
-                        style={styles.input}
-                        type="email"
-                        name="email"
-                        placeholder="you@example.com"
-                        value={form.email}
-                        onChange={handleChange}
-                        required
-                        autoComplete="email"
-                    />
+                    <div style={styles.inputWrap}>
+                        <span style={styles.inputIcon}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="2" y="4" width="20" height="16" rx="2" />
+                                <path d="m22 6-10 7L2 6" />
+                            </svg>
+                        </span>
+                        <input
+                            className="login-input"
+                            style={styles.input}
+                            type="email"
+                            name="email"
+                            placeholder="you@example.com"
+                            value={form.email}
+                            onChange={handleChange}
+                            required
+                            autoComplete="email"
+                        />
+                    </div>
 
                     <label style={styles.label}>Mật khẩu</label>
-                    <input
-                        style={styles.input}
-                        type="password"
-                        name="password"
-                        placeholder="••••••••"
-                        value={form.password}
-                        onChange={handleChange}
-                        required
-                        autoComplete={mode === "login" ? "current-password" : "new-password"}
-                    />
+                    <div style={styles.inputWrap}>
+                        <span style={styles.inputIcon}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                        </span>
+                        <input
+                            className="login-input"
+                            style={styles.input}
+                            type="password"
+                            name="password"
+                            placeholder="••••••••"
+                            value={form.password}
+                            onChange={handleChange}
+                            required
+                            autoComplete={mode === "login" ? "current-password" : "new-password"}
+                        />
+                    </div>
 
                     {mode === "register" && (
                         <>
                             <label style={styles.label}>Xác nhận mật khẩu</label>
-                            <input
-                                style={styles.input}
-                                type="password"
-                                name="confirmPassword"
-                                placeholder="••••••••"
-                                value={form.confirmPassword}
-                                onChange={handleChange}
-                                required
-                                autoComplete="new-password"
-                            />
+                            <div style={styles.inputWrap}>
+                                <span style={styles.inputIcon}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                    </svg>
+                                </span>
+                                <input
+                                    className="login-input"
+                                    style={styles.input}
+                                    type="password"
+                                    name="confirmPassword"
+                                    placeholder="••••••••"
+                                    value={form.confirmPassword}
+                                    onChange={handleChange}
+                                    required
+                                    autoComplete="new-password"
+                                />
+                            </div>
                         </>
                     )}
 
@@ -144,7 +190,7 @@ export default function LoginPage() {
                     {error && <p style={styles.error}>{error}</p>}
                     {successMsg && <p style={styles.success}>{successMsg}</p>}
 
-                    <button type="submit" style={styles.submitBtn} disabled={loading}>
+                    <button type="submit" className="login-submit-btn" style={styles.submitBtn} disabled={loading}>
                         {loading
                             ? "Đang xử lý..."
                             : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
@@ -173,48 +219,64 @@ const styles = {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#E3F2FD",
+        position: "relative",
+        overflow: "hidden",
+        backgroundImage: "linear-gradient(135deg, #dff7ff 0%, #bfe7ff 20%, #8ed0ff 45%, #abd7ff 70%, #d7f0ff 100%)",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         padding: "16px",
     },
+    waveSvg: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 0,
+        pointerEvents: "none",
+    },
     card: {
-        backgroundColor: "#ffffff",
+        position: "relative",
+        zIndex: 10,
+        backgroundColor: "transparent",
         borderRadius: "12px",
         padding: "40px 36px",
         width: "100%",
         maxWidth: "400px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)",
+        boxShadow: "none",
     },
     header: {
         textAlign: "center",
         marginBottom: "28px",
     },
     logo: {
-        display: "inline-block",
-        fontSize: "28px",
-        backgroundColor: "#111",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: "0 auto 16px",
+        fontSize: "32px",
+        backgroundColor: "rgba(255,255,255,0.12)",
         color: "#fff",
-        borderRadius: "8px",
-        width: "44px",
-        height: "44px",
-        lineHeight: "44px",
-        marginBottom: "12px",
+        border: "2px solid rgba(255,255,255,0.55)",
+        borderRadius: "50%",
+        width: "84px",
+        height: "84px",
     },
     appName: {
-        fontSize: "20px",
+        fontSize: "22px",
         fontWeight: "700",
-        color: "#111",
+        color: "#fff",
         margin: "0 0 4px 0",
         letterSpacing: "-0.3px",
+        textShadow: "0 1px 4px rgba(0,0,0,0.15)",
     },
     tagline: {
         fontSize: "13px",
-        color: "#888",
+        color: "rgba(255,255,255,0.85)",
         margin: 0,
     },
     tabRow: {
         display: "flex",
-        borderBottom: "1px solid #eee",
+        borderBottom: "1px solid rgba(255,255,255,0.3)",
         marginBottom: "24px",
     },
     tab: {
@@ -223,7 +285,7 @@ const styles = {
         border: "none",
         padding: "10px 0",
         fontSize: "14px",
-        color: "#999",
+        color: "rgba(255,255,255,0.65)",
         cursor: "pointer",
         fontWeight: "500",
         borderBottom: "2px solid transparent",
@@ -231,8 +293,8 @@ const styles = {
         transition: "color 0.15s, border-color 0.15s",
     },
     tabActive: {
-        color: "#111",
-        borderBottomColor: "#111",
+        color: "#fff",
+        borderBottomColor: "#fff",
     },
     form: {
         display: "flex",
@@ -242,19 +304,34 @@ const styles = {
     label: {
         fontSize: "13px",
         fontWeight: "500",
-        color: "#444",
+        color: "rgba(255,255,255,0.85)",
         marginBottom: "6px",
         marginTop: "14px",
     },
+    inputWrap: {
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+    },
+    inputIcon: {
+        position: "absolute",
+        left: "14px",
+        display: "flex",
+        color: "rgba(255,255,255,0.75)",
+        pointerEvents: "none",
+    },
     input: {
-        padding: "10px 12px",
-        border: "1px solid #e0e0e0",
-        borderRadius: "7px",
+        width: "100%",
+        padding: "12px 16px 12px 40px",
+        border: "1.5px solid rgba(255,255,255,0.5)",
+        borderRadius: "999px",
         fontSize: "14px",
-        color: "#111",
+        color: "#fff",
         outline: "none",
-        backgroundColor: "#fafafa",
-        transition: "border-color 0.15s",
+        backgroundColor: "rgba(255,255,255,0.08)",
+        backdropFilter: "blur(15px)",
+        WebkitBackdropFilter: "blur(15px)",
+        transition: "border-color 0.15s, background-color 0.15s",
     },
     forgotRow: {
         textAlign: "right",
@@ -264,43 +341,43 @@ const styles = {
         background: "none",
         border: "none",
         fontSize: "13px",
-        color: "#888",
+        color: "rgba(255,255,255,0.85)",
         cursor: "pointer",
         padding: 0,
         textDecoration: "underline",
     },
     error: {
         fontSize: "13px",
-        color: "#d0453a",
+        color: "#b3261e",
         marginTop: "12px",
         marginBottom: "0",
         padding: "10px 12px",
-        backgroundColor: "#fff5f5",
+        backgroundColor: "rgba(255,255,255,0.9)",
         borderRadius: "6px",
-        border: "1px solid #fcc",
+        border: "1px solid rgba(255,255,255,0.6)",
     },
     success: {
         fontSize: "13px",
-        color: "#2d7a4f",
+        color: "#1e6b3e",
         marginTop: "12px",
         marginBottom: "0",
         padding: "10px 12px",
-        backgroundColor: "#f0faf4",
+        backgroundColor: "rgba(255,255,255,0.9)",
         borderRadius: "6px",
-        border: "1px solid #b2dfcc",
+        border: "1px solid rgba(255,255,255,0.6)",
     },
     submitBtn: {
         marginTop: "20px",
-        padding: "11px",
-        backgroundColor: "#111",
-        color: "#fff",
+        padding: "13px",
+        backgroundColor: "#fff",
+        color: "#2E7BC4",
         border: "none",
-        borderRadius: "7px",
-        fontSize: "14px",
-        fontWeight: "600",
+        borderRadius: "999px",
+        fontSize: "15px",
+        fontWeight: "700",
         cursor: "pointer",
-        letterSpacing: "0.2px",
-        transition: "background-color 0.15s",
+        letterSpacing: "0.3px",
+        transition: "background-color 0.15s, transform 0.15s",
     },
     guestRow: {
         textAlign: "center",
@@ -308,13 +385,13 @@ const styles = {
         fontSize: "13px",
     },
     guestText: {
-        color: "#aaa",
+        color: "rgba(255,255,255,0.75)",
     },
     guestBtn: {
         background: "none",
         border: "none",
         fontSize: "13px",
-        color: "#555",
+        color: "#fff",
         cursor: "pointer",
         padding: 0,
         textDecoration: "underline",
