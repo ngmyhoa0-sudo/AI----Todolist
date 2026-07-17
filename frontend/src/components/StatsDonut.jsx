@@ -1,18 +1,12 @@
 import { useState, useEffect } from "react";
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { getStats } from "../services/statsService";
 import { getErrorMessage } from "../utils/errorMessage";
 
-// StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột thống kê task, tự gọi statsService
-export default function StatsChart({ refreshTrigger }) {
+const COLORS = { completed: "#4caf82", active: "#e0a83e", overdue: "#e57373" };
+
+// StatsDonut chỉ làm 1 việc: hiển thị tỉ lệ % Hoàn thành/Đang làm/Quá hạn trên tổng số task
+export default function StatsDonut({ refreshTrigger }) {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -21,8 +15,6 @@ export default function StatsChart({ refreshTrigger }) {
         loadStats();
     }, [refreshTrigger]);
 
-    // Tự động gọi lại API mỗi 60 giây để số liệu (đặc biệt "Quá hạn") cập nhật theo thời gian thực,
-    // không chỉ khi người dùng thêm/sửa/xoá task
     useEffect(() => {
         const interval = setInterval(loadStats, 60000);
         return () => clearInterval(interval);
@@ -45,31 +37,31 @@ export default function StatsChart({ refreshTrigger }) {
     if (error) return <p style={styles.error}>{error}</p>;
     if (!stats) return null;
 
-    const chartData = [
-        {
-            name: "Thống kê",
-            total: stats.total ?? 0,
-            completed: stats.completed ?? 0,
-            active: stats.active ?? 0,
-            overdue: stats.overdue ?? 0,
-        },
+    const data = [
+        { name: "Hoàn thành", value: stats.completed ?? 0, color: COLORS.completed },
+        { name: "Đang làm", value: stats.active ?? 0, color: COLORS.active },
+        { name: "Quá hạn", value: stats.overdue ?? 0, color: COLORS.overdue },
     ];
+    const hasData = data.some((d) => d.value > 0);
 
     return (
         <div style={styles.wrapper}>
-            <h3 style={styles.title}>Thống kê công việc</h3>
-            <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} />
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="total" name="Tổng task" fill="#c9dcf5" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="completed" name="Hoàn thành" fill="#5b8def" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="active" name="Đang làm" fill="#2f5fb0" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="overdue" name="Quá hạn" fill="#e57373" radius={[6, 6, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
+            <h3 style={styles.title}>Tỉ lệ trạng thái task</h3>
+            {!hasData ? (
+                <p style={styles.empty}>Chưa có dữ liệu để hiển thị</p>
+            ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                        <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={3}>
+                            {data.map((entry) => (
+                                <Cell key={entry.name} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            )}
         </div>
     );
 }
@@ -87,6 +79,12 @@ const styles = {
         fontWeight: "700",
         color: "#1a2b4c",
         margin: "0 0 14px 0",
+    },
+    empty: {
+        textAlign: "center",
+        color: "#999",
+        fontSize: "13px",
+        padding: "40px 0",
     },
     loading: {
         textAlign: "center",
