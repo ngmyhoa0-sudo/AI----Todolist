@@ -66,6 +66,6 @@ const styles = {
         padding: "8px 14px", borderRadius: "7px", fontSize: "14px",
         color: "#888", textDecoration: "none", fontWeight: "500",
     },
-    linkActive: { backgroundColor: "#111", color: "#fff" },
+    linkActive: { backgroundColor: "#4A9EFF", color: "#fff" },
     content: { maxWidth: "640px", margin: "0 auto", padding: "24px 16px" },
 };
