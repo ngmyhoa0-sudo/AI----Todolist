@@ -70,82 +70,124 @@ export default function CalendarPage() {
     const monthLabel = cursor.toLocaleDateString("vi-VN", { month: "long", year: "numeric" });
 
     return (
-        <div>
-            <h1 style={styles.title}>{t("calendarPageTitle")}</h1>
+        <div style={styles.pageWrapper}>
+            <div style={styles.glow}></div>
+            <span style={styles.deco}>
+                <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+            </span>
 
-            {loading && <p style={styles.loading}>Đang tải...</p>}
-            {error && <p style={styles.error}>{error}</p>}
+            <div style={styles.contentWrap}>
+                <h1 style={styles.title}>{t("calendarPageTitle")}</h1>
 
-            {!loading && !error && (
-                <>
-                    <div style={styles.calendarCard}>
-                        <div style={styles.calHeader}>
-                            <button type="button" style={styles.navBtn} onClick={goPrevMonth}>‹</button>
-                            <span style={styles.monthLabel}>{monthLabel}</span>
-                            <button type="button" style={styles.navBtn} onClick={goNextMonth}>›</button>
+                {loading && <p style={styles.loading}>Đang tải...</p>}
+                {error && <p style={styles.error}>{error}</p>}
+
+                {!loading && !error && (
+                    <>
+                        <div style={styles.calendarCard}>
+                            <img src="/desk-calendar.svg" alt="" style={styles.deskCalendarIcon} />
+                            <img src="/clock.svg" alt="" style={styles.clockIcon} />
+
+                            <div style={styles.calHeader}>
+                                <button type="button" style={styles.navBtn} onClick={goPrevMonth}>‹</button>
+                                <span style={styles.monthLabel}>{monthLabel}</span>
+                                <button type="button" style={styles.navBtn} onClick={goNextMonth}>›</button>
+                            </div>
+
+                            <div style={styles.weekRow}>
+                                {WEEKDAYS.map((w) => (
+                                    <span key={w} style={styles.weekday}>{w}</span>
+                                ))}
+                            </div>
+
+                            <div style={styles.grid}>
+                                {cells.map((date, idx) => {
+                                    if (!date) return <div key={idx} style={styles.cellEmpty} />;
+                                    const key = formatKey(date);
+                                    const hasTasks = !!tasksByDate[key];
+                                    const isSelected = key === selectedKey;
+                                    const isToday = key === formatKey(new Date());
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={idx}
+                                            onClick={() => setSelectedDate(date)}
+                                            style={{
+                                                ...styles.cell,
+                                                ...(isSelected ? styles.cellSelected : {}),
+                                                ...(isToday && !isSelected ? styles.cellToday : {}),
+                                            }}
+                                        >
+                                            {date.getDate()}
+                                            {hasTasks && <span style={styles.dot} />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
-                        <div style={styles.weekRow}>
-                            {WEEKDAYS.map((w) => (
-                                <span key={w} style={styles.weekday}>{w}</span>
+                        <div style={styles.taskListCard}>
+                            <h2 style={styles.taskListTitle}>
+                                {selectedDate.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" })}
+                            </h2>
+                            {tasksForSelected.length === 0 && (
+                                <p style={styles.empty}>Không có task nào vào ngày này.</p>
+                            )}
+                            {tasksForSelected.map((t) => (
+                                <div key={t.id} style={styles.taskItem}>
+                                    <span style={{ ...styles.taskDot, backgroundColor: t.is_completed ? "#2d7a4f" : "#111" }} />
+                                    <span style={{ ...styles.taskTitle, ...(t.is_completed ? styles.taskTitleDone : {}) }}>
+                                        {t.title}
+                                    </span>
+                                    <span style={styles.taskTime}>
+                                        {new Date(t.deadline).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                    {t.repeat_rule && <span style={styles.repeatIcon}>🔄</span>}
+                                </div>
                             ))}
                         </div>
-
-                        <div style={styles.grid}>
-                            {cells.map((date, idx) => {
-                                if (!date) return <div key={idx} style={styles.cellEmpty} />;
-                                const key = formatKey(date);
-                                const hasTasks = !!tasksByDate[key];
-                                const isSelected = key === selectedKey;
-                                const isToday = key === formatKey(new Date());
-                                return (
-                                    <button
-                                        type="button"
-                                        key={idx}
-                                        onClick={() => setSelectedDate(date)}
-                                        style={{
-                                            ...styles.cell,
-                                            ...(isSelected ? styles.cellSelected : {}),
-                                            ...(isToday && !isSelected ? styles.cellToday : {}),
-                                        }}
-                                    >
-                                        {date.getDate()}
-                                        {hasTasks && <span style={styles.dot} />}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div style={styles.taskListCard}>
-                        <h2 style={styles.taskListTitle}>
-                            {selectedDate.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" })}
-                        </h2>
-                        {tasksForSelected.length === 0 && (
-                            <p style={styles.empty}>Không có task nào vào ngày này.</p>
-                        )}
-                        {tasksForSelected.map((t) => (
-                            <div key={t.id} style={styles.taskItem}>
-                                <span style={{ ...styles.taskDot, backgroundColor: t.is_completed ? "#2d7a4f" : "#111" }} />
-                                <span style={{ ...styles.taskTitle, ...(t.is_completed ? styles.taskTitleDone : {}) }}>
-                                    {t.title}
-                                </span>
-                                <span style={styles.taskTime}>
-                                    {new Date(t.deadline).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                                {t.repeat_rule && <span style={styles.repeatIcon}>🔄</span>}
-                            </div>
-                        ))}
-                    </div>
-                </>
-            )}
+                    </>
+                )}
+            </div>
         </div>
     );
 }
 
 const styles = {
+    pageWrapper: {
+        position: "relative",
+    },
+    glow: {
+        position: "absolute",
+        width: "260px",
+        height: "260px",
+        borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(110,195,244,0.28), transparent 70%)",
+        bottom: "-40px",
+        left: "-60px",
+        filter: "blur(30px)",
+        pointerEvents: "none",
+        zIndex: 0,
+    },
+    deco: {
+        position: "absolute",
+        bottom: "10px",
+        left: "10px",
+        color: "rgba(74,158,255,0.25)",
+        pointerEvents: "none",
+        zIndex: 0,
+    },
+    contentWrap: {
+        position: "relative",
+        zIndex: 1,
+    },
     title: {
-        fontSize: "22px", fontWeight: "700", color: "#111",
+        fontSize: "22px", fontWeight: "700", color: "#1a2b4c",
         margin: "0 0 20px 0", letterSpacing: "-0.3px",
     },
     loading: { textAlign: "center", color: "#999", fontSize: "14px", padding: "20px 0" },
@@ -154,8 +196,25 @@ const styles = {
         backgroundColor: "#fff5f5", borderRadius: "6px", border: "1px solid #fcc",
     },
     calendarCard: {
-        backgroundColor: "#fff", border: "1px solid #eee", borderRadius: "10px",
-        padding: "16px", marginBottom: "16px",
+        position: "relative",
+        padding: "0", marginBottom: "20px",
+    },
+    deskCalendarIcon: {
+        position: "absolute",
+        right: "10px",
+        bottom: "-50px",
+        width: "180px",
+        opacity: 0.1,
+        pointerEvents: "none",
+        transform: "scaleX(-1)",
+    },
+    clockIcon: {
+        position: "absolute",
+        left: "150px",
+        bottom: "6px",
+        width: "80px",
+        opacity: 0.1,
+        pointerEvents: "none,",
     },
     calHeader: {
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -165,7 +224,7 @@ const styles = {
         background: "none", border: "none", fontSize: "20px", color: "#444",
         cursor: "pointer", padding: "4px 10px",
     },
-    monthLabel: { fontSize: "15px", fontWeight: "600", color: "#111", textTransform: "capitalize" },
+    monthLabel: { fontSize: "15px", fontWeight: "700", color: "#1a2b4c", textTransform: "capitalize" },
     weekRow: {
         display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
         marginBottom: "4px",
@@ -179,17 +238,19 @@ const styles = {
         position: "relative", padding: "8px 0", fontSize: "13px", color: "#111",
         background: "none", border: "none", borderRadius: "8px", cursor: "pointer",
     },
-    cellSelected: { backgroundColor: "#111", color: "#fff", fontWeight: "600" },
-    cellToday: { border: "1px solid #111", fontWeight: "600" },
+    cellSelected: { backgroundColor: "#6EC3F4", color: "#fff", fontWeight: "600" },
+    cellToday: { border: "1px solid #6EC3F4", fontWeight: "600" },
     dot: {
         position: "absolute", bottom: "2px", left: "50%", transform: "translateX(-50%)",
-        width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#d0453a",
+        width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#4A9EFF",
     },
     taskListCard: {
-        backgroundColor: "#fff", border: "1px solid #eee", borderRadius: "10px", padding: "16px",
+        backgroundColor: "#fff",
+        borderRadius: "16px", padding: "16px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05)",
     },
     taskListTitle: {
-        fontSize: "14px", fontWeight: "600", color: "#111", margin: "0 0 12px 0",
+        fontSize: "14px", fontWeight: "700", color: "#1a2b4c", margin: "0 0 12px 0",
         textTransform: "capitalize",
     },
     empty: { textAlign: "center", color: "#999", fontSize: "13px", padding: "12px 0" },
