@@ -71,15 +71,6 @@ export default function CalendarPage() {
 
     return (
         <div style={styles.pageWrapper}>
-            <div style={styles.glow}></div>
-            <span style={styles.deco}>
-                <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-            </span>
 
             <div style={styles.contentWrap}>
                 <h1 style={styles.title}>{t("calendarPageTitle")}</h1>
@@ -115,8 +106,9 @@ export default function CalendarPage() {
                                     return (
                                         <button
                                             type="button"
+                                            className={isSelected ? undefined : "calendar-day-btn"}
                                             key={idx}
-                                            onClick={() => setSelectedDate(date)}
+                                            onClick={(e) => { setSelectedDate(date); e.currentTarget.blur(); }}
                                             style={{
                                                 ...styles.cell,
                                                 ...(isSelected ? styles.cellSelected : {}),
@@ -162,26 +154,6 @@ const styles = {
     pageWrapper: {
         position: "relative",
     },
-    glow: {
-        position: "absolute",
-        width: "260px",
-        height: "260px",
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(110,195,244,0.28), transparent 70%)",
-        bottom: "-40px",
-        left: "-60px",
-        filter: "blur(30px)",
-        pointerEvents: "none",
-        zIndex: 0,
-    },
-    deco: {
-        position: "absolute",
-        bottom: "10px",
-        left: "10px",
-        color: "rgba(74,158,255,0.25)",
-        pointerEvents: "none",
-        zIndex: 0,
-    },
     contentWrap: {
         position: "relative",
         zIndex: 1,
@@ -203,18 +175,18 @@ const styles = {
         position: "absolute",
         right: "10px",
         bottom: "-50px",
-        width: "180px",
+        width: "clamp(90px, 25vw, 180px)",
         opacity: 0.1,
         pointerEvents: "none",
         transform: "scaleX(-1)",
     },
     clockIcon: {
         position: "absolute",
-        left: "150px",
+        left: "10px",
         bottom: "6px",
-        width: "80px",
-        opacity: 0.1,
-        pointerEvents: "none,",
+        width: "clamp(40px, 12vw, 80px)",
+        opacity: 0.18,
+        pointerEvents: "none",
     },
     calHeader: {
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -236,7 +208,10 @@ const styles = {
     cellEmpty: { padding: "8px 0" },
     cell: {
         position: "relative", padding: "8px 0", fontSize: "13px", color: "#111",
-        background: "none", border: "none", borderRadius: "8px", cursor: "pointer",
+        backgroundColor: "transparent", border: "none", borderRadius: "8px", cursor: "pointer",
+        outline: "none",
+        WebkitTapHighlightColor: "transparent",
+        forcedColorAdjust: "none",
     },
     cellSelected: { backgroundColor: "#6EC3F4", color: "#fff", fontWeight: "600" },
     cellToday: { border: "1px solid #6EC3F4", fontWeight: "600" },
