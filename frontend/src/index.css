@@ -17,3 +17,11 @@ body {
 .login-submit-btn:hover {
     transform: scale(1.03);
 }
+.calendar-day-btn:active,
+.calendar-day-btn:focus,
+.calendar-day-btn:focus-visible {
+    background-color: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
