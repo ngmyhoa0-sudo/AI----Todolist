@@ -1,6 +1,8 @@
 import { Outlet, NavLink } from "react-router-dom";
 import ChatPanel from "../components/ChatPanel";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
+import { THEMES } from "../theme";
 
 const ICONS = {
     tasks: (
@@ -34,6 +36,8 @@ const ICONS = {
 
 export default function AppLayout() {
     const { t } = useLanguage();
+    const { theme } = useTheme();
+    const colors = THEMES[theme];
 
     const NAV_ITEMS = [
         { to: "/home", label: t("navTasks"), icon: ICONS.tasks },
@@ -43,9 +47,9 @@ export default function AppLayout() {
     ];
 
     return (
-        <div style={styles.page}>
-            <nav style={styles.nav}>
-                <span style={styles.brand}>AI Todolist</span>
+        <div style={{ ...styles.page, backgroundColor: colors.pageBg }}>
+            <nav style={{ ...styles.nav, backgroundColor: colors.navBg, borderBottom: `1px solid ${colors.border}` }}>
+                <span style={{ ...styles.brand, color: colors.heading }}>AI Todolist</span>
                 <div style={styles.links}>
                     {NAV_ITEMS.map((item) => (
                         <NavLink
@@ -53,7 +57,8 @@ export default function AppLayout() {
                             to={item.to}
                             style={({ isActive }) => ({
                                 ...styles.link,
-                                ...(isActive ? styles.linkActive : {}),
+                                color: isActive ? "#fff" : colors.textMuted,
+                                backgroundColor: isActive ? "#6EC3F4" : "transparent",
                             })}
                         >
                             {item.icon}
@@ -75,7 +80,6 @@ export default function AppLayout() {
 const styles = {
     page: {
         minHeight: "100vh",
-        backgroundColor: "#E3F2FD",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
     },
     nav: {
@@ -83,21 +87,18 @@ const styles = {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "14px 24px",
-        backgroundColor: "#fff",
-        borderBottom: "1px solid #eee",
         position: "sticky",
         top: 0,
         zIndex: 10,
         flexWrap: "wrap",
         gap: "12px",
     },
-    brand: { fontSize: "18px", fontWeight: "700", color: "#1a2b4c" },
+    brand: { fontSize: "18px", fontWeight: "700" },
     links: { display: "flex", gap: "6px", flexWrap: "wrap" },
     link: {
         display: "flex", alignItems: "center", gap: "6px",
         padding: "8px 14px", borderRadius: "7px", fontSize: "14px",
-        color: "#888", textDecoration: "none", fontWeight: "500",
+        textDecoration: "none", fontWeight: "500",
     },
-    linkActive: { backgroundColor: "#6EC3F4", color: "#fff" },
     content: { maxWidth: "640px", margin: "0 auto", padding: "24px 16px" },
 };

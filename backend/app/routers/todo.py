@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from postgrest.exceptions import APIError
@@ -8,6 +9,7 @@ from ..database import supabase
 from ..dependencies import verify_token
 router = APIRouter(prefix="/todos", tags=["todos"])
 
+VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 _RLS_ERROR_CODE = "42501"
 
 
@@ -84,16 +86,20 @@ def update_todo(todo_id: int, todo: TodoUpdate, user=Depends(verify_token)):
                 supabase.table("tasks").select("deadline,repeat_rule").eq("id", todo_id).eq("user_id", user["id"])
             )
             current_task = current.data[0] if current.data else None
+            now_vn = datetime.now(VN_TZ)
             if current_task and current_task.get("repeat_rule") and current_task.get("deadline"):
                 next_deadline = _advance_deadline(
                     datetime.fromisoformat(current_task["deadline"]), current_task["repeat_rule"]
                 )
                 update_data["deadline"] = next_deadline.isoformat()
                 update_data["is_completed"] = False
+                update_data["completed_at"] = now_vn.isoformat()
             else:
                 update_data["is_completed"] = True
+                update_data["completed_at"] = now_vn.isoformat()
         else:
             update_data["is_completed"] = False
+            update_data["completed_at"] = None
 
     res = _execute(
         supabase.table("tasks").update(update_data).eq("id", todo_id).eq("user_id", user["id"])

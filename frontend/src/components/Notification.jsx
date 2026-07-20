@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 // Notification chỉ làm 1 việc: hiển thị thông báo deadline, không tự gọi API
 // Nhận vào danh sách todos đã có, tự tính task nào sắp đến hạn / đã quá hạn
@@ -14,6 +15,7 @@ function getDeadlineStatus(deadline) {
 }
 
 export default function Notification({ todos }) {
+    const { t } = useLanguage();
     // Không dùng giá trị này để hiển thị gì cả — chỉ để ép component tính lại mỗi phút
     const [, forceTick] = useState(0);
 
@@ -44,10 +46,10 @@ export default function Notification({ todos }) {
                 >
                     <span style={styles.icon}>{todo.status === "overdue" ? "⚠️" : "⏰"}</span>
                     <span style={styles.text}>
-                        {todo.status === "overdue" ? "Đã quá hạn: " : "Sắp đến hạn: "}
+                        {todo.status === "overdue" ? t("overduePrefix") : t("dueSoonPrefix")}
                         <strong>{todo.title}</strong>
                         {" — "}
-                        {new Date(todo.deadline).toLocaleString("vi-VN", {
+                        {new Date(todo.deadline).toLocaleString(t("dateLocale"), {
                             day: "2-digit", month: "2-digit",
                             hour: "2-digit", minute: "2-digit",
                         })}
