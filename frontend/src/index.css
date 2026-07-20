@@ -1,13 +1,13 @@
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
-  background-color: #f7f7f5;
-  color: #111;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background-color: #f7f7f5;
+    color: #111;
 }
 
 .login-input::placeholder {
@@ -17,6 +17,7 @@ body {
 .login-submit-btn:hover {
     transform: scale(1.03);
 }
+
 .calendar-day-btn:active,
 .calendar-day-btn:focus,
 .calendar-day-btn:focus-visible {
@@ -24,4 +25,127 @@ body {
     outline: none !important;
     box-shadow: none !important;
     -webkit-tap-highlight-color: transparent !important;
+}
+
+/* React Datepicker – light mode: số ngày/giờ đang chọn hiện màu trắng cho rõ tương phản */
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__time-list-item--selected {
+    background-color: #6EC3F4 !important;
+    color: #fff !important;
+}
+
+    .react-datepicker__day--selected:hover,
+    .react-datepicker__time-list-item--selected:hover {
+        background-color: #4A85C0 !important;
+    }
+
+/* Khung header (tháng/năm, tên thứ) - đổi màu ở đây (đổi mã màu #eaf6ff thành màu bạn muốn) */
+.react-datepicker__header,
+.react-datepicker__header--time,
+.react-datepicker-time__header {
+    background-color: #eaf6ff !important;
+    border-top-right-radius: 0 !important;
+    width: 104.2%;
+    box-sizing: border-box;
+}
+
+/* Đồng nhất cỡ chữ toàn khung lịch - đổi số ở đây nếu muốn to/nhỏ khác */
+.react-datepicker,
+.react-datepicker__month-container,
+.react-datepicker__time-container {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 13px;
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+    width: 1.9rem;
+    line-height: 1.9rem;
+    margin: 0.2rem;
+    font-size: 13px;
+}
+
+.react-datepicker__navigation {
+    top: 10px;
+}
+
+/* Xếp khung giờ nằm bên cạnh lịch (chung 1 khối, không tách rời) */
+.react-datepicker {
+    display: flex !important;
+}
+
+.react-datepicker__input-time-container {
+    margin: 0 !important;
+}
+
+/* Nút "tháng sau" bị đẩy lệch ra rìa phải vì khối giờ làm cả khung rộng ra - ép về đúng vị trí cạnh lịch */
+.react-datepicker__navigation--next {
+    right: 130px !important;
+}
+
+/* Ẩn thanh scrollbar xám của 2 cột giờ/phút, vẫn cuộn được bằng chuột/lăn chuột */
+.time-scroll-col {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+    .time-scroll-col::-webkit-scrollbar {
+        display: none;
+    }
+
+/* React Datepicker – dark mode */
+.app-datepicker-dark {
+    background-color: #1b2434 !important;
+    border-color: #2b3550 !important;
+    color: #e8ecf5 !important;
+}
+
+    .app-datepicker-dark .react-datepicker__header {
+        background-color: #161d2c !important;
+        border-bottom-color: #2b3550 !important;
+        color: #e8ecf5 !important;
+    }
+
+    .app-datepicker-dark .react-datepicker__current-month,
+    .app-datepicker-dark .react-datepicker__day-name,
+    .app-datepicker-dark .react-datepicker__day,
+    .app-datepicker-dark .react-datepicker-time__header {
+        color: #e8ecf5 !important;
+    }
+
+        .app-datepicker-dark .react-datepicker__day:hover,
+        .app-datepicker-dark .react-datepicker__time-list-item:hover {
+            background-color: #242e44 !important;
+        }
+
+    .app-datepicker-dark .react-datepicker__day--selected,
+    .app-datepicker-dark .react-datepicker__day--keyboard-selected,
+    .app-datepicker-dark .react-datepicker__time-list-item--selected {
+        background-color: #5b8def !important;
+        color: #fff !important;
+    }
+
+    .app-datepicker-dark .react-datepicker__day--outside-month {
+        color: #5c6580 !important;
+    }
+
+    .app-datepicker-dark .react-datepicker__time-container,
+    .app-datepicker-dark .react-datepicker__time-box {
+        background-color: #1b2434 !important;
+        border-left-color: #2b3550 !important;
+    }
+
+    .app-datepicker-dark .react-datepicker__navigation-icon::before {
+        border-color: #9aa4b8 !important;
+    }
+/* Ẩn chữ "Time" phía trên 2 cột giờ/phút */
+.react-datepicker-time__caption {
+    display: none !important;
 }

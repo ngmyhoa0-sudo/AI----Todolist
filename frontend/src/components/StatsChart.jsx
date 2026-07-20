@@ -6,34 +6,59 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip,
+    Legend,
     ResponsiveContainer,
 } from "recharts";
-import { getStats } from "../services/statsService";
+import { getCompletedByDay, getCompletedByMonth } from "../services/statsService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
+import { THEMES } from "../theme";
 
-// StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột thống kê task, tự gọi statsService
-export default function StatsChart({ refreshTrigger }) {
-    const [stats, setStats] = useState(null);
+// StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột số task hoàn thành theo tuần/tháng do StatsPage truyền xuống
+export default function StatsChart({ refreshTrigger, range, offset }) {
+    const { theme } = useTheme();
+    const { t, language } = useLanguage();
+    const colors = THEMES[theme];
+    const [chartData, setChartData] = useState([]);
+    const [hasPrevYear, setHasPrevYear] = useState(false);
+    const [years, setYears] = useState({ current: null, prev: null });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        loadStats();
-    }, [refreshTrigger]);
+        loadData();
+    }, [refreshTrigger, range, offset, language]);
 
-    // Tự động gọi lại API mỗi 60 giây để số liệu (đặc biệt "Quá hạn") cập nhật theo thời gian thực,
-    // không chỉ khi người dùng thêm/sửa/xoá task
     useEffect(() => {
-        const interval = setInterval(loadStats, 60000);
+        const interval = setInterval(loadData, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [range, offset]);
 
-    const loadStats = async () => {
+    const loadData = async () => {
         setLoading(true);
         setError("");
         try {
-            const data = await getStats();
-            setStats(data.data);
+            const weekdays = t("weekdaysShort");
+            const months = t("monthsShort");
+            if (range === "week") {
+                const res = await getCompletedByDay(offset);
+                const counts = res.data.counts;
+                setChartData(weekdays.map((label, i) => ({ name: label, count: counts[i] })));
+                setHasPrevYear(false);
+            } else {
+                const res = await getCompletedByMonth(offset);
+                const { currentYear, currentCounts, prevYear, prevCounts } = res.data;
+                setYears({ current: currentYear, prev: prevYear });
+                setHasPrevYear(!!prevCounts);
+                setChartData(
+                    months.map((label, i) => ({
+                        name: label,
+                        current: currentCounts[i],
+                        ...(prevCounts ? { prev: prevCounts[i] } : {}),
+                    }))
+                );
+            }
         } catch (err) {
             setError(getErrorMessage(err));
         } finally {
@@ -41,66 +66,68 @@ export default function StatsChart({ refreshTrigger }) {
         }
     };
 
-    if (loading) return <p style={styles.loading}>Đang tải biểu đồ...</p>;
-    if (error) return <p style={styles.error}>{error}</p>;
-    if (!stats) return null;
-
-    const chartData = [
-        {
-            name: "Thống kê",
-            total: stats.total ?? 0,
-            completed: stats.completed ?? 0,
-            active: stats.active ?? 0,
-            overdue: stats.overdue ?? 0,
+    const styles = {
+        wrapper: {
+            borderRadius: "16px",
+            backgroundColor: colors.cardBg,
+            padding: "20px",
+            marginBottom: "20px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
         },
-    ];
+        title: {
+            fontSize: "15px",
+            fontWeight: "700",
+            color: colors.heading,
+            margin: "0 0 14px 0",
+        },
+        loading: {
+            textAlign: "center",
+            color: "#999",
+            fontSize: "13px",
+            padding: "12px 0",
+        },
+        error: {
+            fontSize: "13px",
+            color: "#d0453a",
+            padding: "10px 12px",
+            backgroundColor: "#fff5f5",
+            borderRadius: "6px",
+            border: "1px solid #fcc",
+            marginBottom: "16px",
+        },
+    };
 
     return (
         <div style={styles.wrapper}>
-            <h3 style={styles.title}>Thống kê công việc</h3>
-            <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} />
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="total" name="Tổng task" fill="#c9dcf5" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="completed" name="Hoàn thành" fill="#5b8def" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="active" name="Đang làm" fill="#2f5fb0" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="overdue" name="Quá hạn" fill="#e57373" radius={[6, 6, 0, 0]} />
-                </BarChart>
-            </ResponsiveContainer>
+            <h3 style={styles.title}>{t("completedTasksChartTitle")}</h3>
+
+            {loading && <p style={styles.loading}>{t("loadingChart")}</p>}
+            {error && <p style={styles.error}>{error}</p>}
+
+            {!loading && !error && (
+                <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} stroke={colors.border} />
+                        <XAxis dataKey="name" tick={{ fill: colors.textMuted, fontSize: 12 }} />
+                        <YAxis allowDecimals={false} tick={{ fill: colors.textMuted }} />
+                        <Tooltip
+                            contentStyle={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, color: colors.text }}
+                            cursor={{ fill: colors.border, opacity: 0 }}
+                        />
+                        {range === "month" && hasPrevYear && <Legend wrapperStyle={{ color: colors.text }} />}
+                        {range === "week" ? (
+                            <Bar dataKey="count" name={t("completedTasks")} fill="#5b8def" radius={[6, 6, 0, 0]} />
+                        ) : hasPrevYear ? (
+                            <>
+                                <Bar dataKey="prev" name={`${t("yearLabel")} ${years.prev}`} fill="#c9dcf5" radius={[6, 6, 0, 0]} />
+                                <Bar dataKey="current" name={`${t("yearLabel")} ${years.current}`} fill="#5b8def" radius={[6, 6, 0, 0]} />
+                            </>
+                        ) : (
+                            <Bar dataKey="current" name={t("completedTasks")} fill="#5b8def" radius={[6, 6, 0, 0]} />
+                        )}
+                    </BarChart>
+                </ResponsiveContainer>
+            )}
         </div>
     );
 }
-
-const styles = {
-    wrapper: {
-        borderRadius: "16px",
-        backgroundColor: "#fff",
-        padding: "20px",
-        marginBottom: "20px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-    },
-    title: {
-        fontSize: "15px",
-        fontWeight: "700",
-        color: "#1a2b4c",
-        margin: "0 0 14px 0",
-    },
-    loading: {
-        textAlign: "center",
-        color: "#999",
-        fontSize: "13px",
-        padding: "12px 0",
-    },
-    error: {
-        fontSize: "13px",
-        color: "#d0453a",
-        padding: "10px 12px",
-        backgroundColor: "#fff5f5",
-        borderRadius: "6px",
-        border: "1px solid #fcc",
-        marginBottom: "16px",
-    },
-};

@@ -3,10 +3,16 @@ import { askAI } from "../services/aiService";
 import { getChatHistory } from "../services/chatHistoryService";
 import { getErrorMessage } from "../utils/errorMessage";
 import { useTaskRefresh } from "../context/TaskRefreshContext";
+import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
+import { THEMES } from "../theme";
 
 // ChatBox chỉ làm 1 việc: giao diện chatbot AI, tự gọi aiService
 export default function ChatBox() {
     const { bump } = useTaskRefresh();
+    const { t } = useLanguage();
+    const { theme } = useTheme();
+    const colors = THEMES[theme];
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
@@ -62,13 +68,103 @@ export default function ChatBox() {
         }
     };
 
+    const styles = {
+        wrapper: {
+            display: "flex",
+            flexDirection: "column",
+            backgroundColor: colors.cardBg,
+            border: `1px solid ${colors.border}`,
+            borderRadius: "10px",
+            overflow: "hidden",
+            marginBottom: "20px",
+            fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        },
+        header: {
+            padding: "12px 14px",
+            fontSize: "14px",
+            fontWeight: "600",
+            color: colors.heading,
+            borderBottom: `1px solid ${colors.border}`,
+        },
+        messages: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            padding: "14px",
+            maxHeight: "320px",
+            overflowY: "auto",
+        },
+        empty: {
+            textAlign: "center",
+            color: colors.textMuted,
+            fontSize: "13px",
+            padding: "20px 0",
+        },
+        bubbleRow: {
+            display: "flex",
+        },
+        bubble: {
+            maxWidth: "80%",
+            padding: "8px 12px",
+            borderRadius: "12px",
+            fontSize: "13px",
+            lineHeight: "1.4",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+        },
+        bubbleUser: {
+            backgroundColor: "#6EC3F4",
+            color: "#fff",
+            borderBottomRightRadius: "2px",
+        },
+        bubbleAi: {
+            backgroundColor: colors.inputBg,
+            color: colors.text,
+            borderBottomLeftRadius: "2px",
+        },
+        error: {
+            fontSize: "13px",
+            color: "#d0453a",
+            padding: "10px 14px",
+            backgroundColor: "#fff5f5",
+            borderTop: "1px solid #fcc",
+        },
+        inputRow: {
+            display: "flex",
+            gap: "8px",
+            padding: "12px 14px",
+            borderTop: `1px solid ${colors.border}`,
+        },
+        input: {
+            flex: 1,
+            padding: "10px 12px",
+            border: `1px solid ${colors.border}`,
+            borderRadius: "7px",
+            fontSize: "14px",
+            outline: "none",
+            backgroundColor: colors.inputBg,
+            color: colors.text,
+        },
+        sendBtn: {
+            padding: "10px 18px",
+            backgroundColor: "#6EC3F4",
+            color: "#fff",
+            border: "none",
+            borderRadius: "7px",
+            fontSize: "14px",
+            fontWeight: "600",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+        },
+    };
+
     return (
         <div style={styles.wrapper}>
-            <div style={styles.header}>Trợ lý AI</div>
+            <div style={styles.header}>{t("aiAssistant")}</div>
 
             <div style={styles.messages}>
                 {messages.length === 0 && !loading && (
-                    <p style={styles.empty}>Hỏi AI về task của bạn...</p>
+                    <p style={styles.empty}>{t("askAiPlaceholder")}</p>
                 )}
 
                 {messages.map((msg, idx) => (
@@ -93,7 +189,7 @@ export default function ChatBox() {
                 {loading && (
                     <div style={{ ...styles.bubbleRow, justifyContent: "flex-start" }}>
                         <span style={{ ...styles.bubble, ...styles.bubbleAi }}>
-                            Đang trả lời...
+                            {t("aiThinking")}
                         </span>
                     </div>
                 )}
@@ -110,7 +206,7 @@ export default function ChatBox() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Nhập câu hỏi..."
+                    placeholder={t("chatInputPlaceholder")}
                     disabled={loading}
                 />
                 <button
@@ -119,98 +215,9 @@ export default function ChatBox() {
                     onClick={handleSend}
                     disabled={loading || !text.trim()}
                 >
-                    {loading ? "..." : "Gửi"}
+                    {loading ? "..." : t("sendBtn")}
                 </button>
             </div>
         </div>
     );
 }
-
-const styles = {
-    wrapper: {
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "#fff",
-        border: "1px solid #eee",
-        borderRadius: "10px",
-        overflow: "hidden",
-        marginBottom: "20px",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    },
-    header: {
-        padding: "12px 14px",
-        fontSize: "14px",
-        fontWeight: "600",
-        color: "#111",
-        borderBottom: "1px solid #eee",
-    },
-    messages: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-        padding: "14px",
-        maxHeight: "320px",
-        overflowY: "auto",
-    },
-    empty: {
-        textAlign: "center",
-        color: "#999",
-        fontSize: "13px",
-        padding: "20px 0",
-    },
-    bubbleRow: {
-        display: "flex",
-    },
-    bubble: {
-        maxWidth: "80%",
-        padding: "8px 12px",
-        borderRadius: "12px",
-        fontSize: "13px",
-        lineHeight: "1.4",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-    },
-    bubbleUser: {
-        backgroundColor: "#111",
-        color: "#fff",
-        borderBottomRightRadius: "2px",
-    },
-    bubbleAi: {
-        backgroundColor: "#f0f0f0",
-        color: "#111",
-        borderBottomLeftRadius: "2px",
-    },
-    error: {
-        fontSize: "13px",
-        color: "#d0453a",
-        padding: "10px 14px",
-        backgroundColor: "#fff5f5",
-        borderTop: "1px solid #fcc",
-    },
-    inputRow: {
-        display: "flex",
-        gap: "8px",
-        padding: "12px 14px",
-        borderTop: "1px solid #eee",
-    },
-    input: {
-        flex: 1,
-        padding: "10px 12px",
-        border: "1px solid #e0e0e0",
-        borderRadius: "7px",
-        fontSize: "14px",
-        outline: "none",
-        backgroundColor: "#fafafa",
-    },
-    sendBtn: {
-        padding: "10px 18px",
-        backgroundColor: "#111",
-        color: "#fff",
-        border: "none",
-        borderRadius: "7px",
-        fontSize: "14px",
-        fontWeight: "600",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-    },
-};

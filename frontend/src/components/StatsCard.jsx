@@ -1,9 +1,21 @@
 import { useState, useEffect } from "react";
 import { getStats } from "../services/statsService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
+import { THEMES } from "../theme";
+
+const CARD_BG = {
+    light: { total: "#eef2f9", completed: "#e3f2e6", active: "#fdf3df", overdue: "#fbe6e6" },
+    dark: { total: "#1e2735", completed: "#1b2e22", active: "#332c1a", overdue: "#3a2124" },
+};
 
 // StatsCard chỉ làm 1 việc: hiển thị số liệu tổng quan, tự gọi statsService
 export default function StatsCard({ refreshTrigger }) {
+    const { theme } = useTheme();
+    const { t } = useLanguage();
+    const colors = THEMES[theme];
+    const cardBg = CARD_BG[theme];
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -12,8 +24,6 @@ export default function StatsCard({ refreshTrigger }) {
         loadStats();
     }, [refreshTrigger]);
 
-    // Tự động gọi lại API mỗi 60 giây để số liệu (đặc biệt "Quá hạn") cập nhật theo thời gian thực,
-    // không chỉ khi người dùng thêm/sửa/xoá task
     useEffect(() => {
         const interval = setInterval(loadStats, 60000);
         return () => clearInterval(interval);
@@ -32,23 +42,23 @@ export default function StatsCard({ refreshTrigger }) {
         }
     };
 
-    if (loading) return <p style={styles.loading}>Đang tải thống kê...</p>;
+    if (loading) return <p style={styles.loading}>{t("loadingStats")}</p>;
     if (error) return <p style={styles.error}>{error}</p>;
     if (!stats) return null;
 
     const cards = [
-        { label: "Tổng task", value: stats.total ?? 0, bg: "#eef2f9" },
-        { label: "Hoàn thành", value: stats.completed ?? 0, bg: "#e3f2e6" },
-        { label: "Đang làm", value: stats.active ?? 0, bg: "#fdf3df" },
-        { label: "Quá hạn", value: stats.overdue ?? 0, bg: "#fbe6e6" },
+        { label: t("totalTasks"), value: stats.total ?? 0, bg: cardBg.total },
+        { label: t("completedTasks"), value: stats.completed ?? 0, bg: cardBg.completed },
+        { label: t("activeTasks"), value: stats.active ?? 0, bg: cardBg.active },
+        { label: t("overdueTasks"), value: stats.overdue ?? 0, bg: cardBg.overdue },
     ];
 
     return (
         <div style={styles.grid}>
             {cards.map((card) => (
                 <div key={card.label} style={{ ...styles.card, backgroundColor: card.bg }}>
-                    <span style={styles.value}>{card.value}</span>
-                    <span style={styles.label}>{card.label}</span>
+                    <span style={{ ...styles.value, color: colors.heading }}>{card.value}</span>
+                    <span style={{ ...styles.label, color: colors.textMuted }}>{card.label}</span>
                 </div>
             ))}
         </div>
@@ -70,14 +80,12 @@ const styles = {
     },
     value: {
         fontSize: "32px",
-        fontWeight: "800",
-        color: "#1a2b4c",
+        fontWeight: "789",
         marginBottom: "4px",
         letterSpacing: "-0.5px",
     },
     label: {
         fontSize: "13px",
-        color: "#6b7280",
         fontWeight: "500",
     },
     loading: {

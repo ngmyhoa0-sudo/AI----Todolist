@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function LoginPage() {
     const navigate = useNavigate();
+    const { t } = useLanguage();
     const [mode, setMode] = useState("login");
     const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
     const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export default function LoginPage() {
         setSuccessMsg("");
 
         if (mode === "register" && form.password !== form.confirmPassword) {
-            setError("Mật khẩu xác nhận không khớp.");
+            setError(t("passwordMismatch"));
             return;
         }
 
@@ -42,7 +44,7 @@ export default function LoginPage() {
                 navigate("/home");
             } else {
                 await authService.register({ email: form.email, password: form.password });
-                setSuccessMsg("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.");
+                setSuccessMsg(t("registerSuccess"));
             }
         } catch (err) {
             setError(getErrorMessage(err));
@@ -89,7 +91,7 @@ export default function LoginPage() {
                 <div style={styles.header}>
                     <span style={styles.logo}>✓</span>
                     <h1 style={styles.appName}>AI Todolist</h1>
-                    <p style={styles.tagline}>Quản lý công việc thông minh hơn</p>
+                    <p style={styles.tagline}>{t("loginTagline")}</p>
                 </div>
 
                 <div style={styles.tabRow}>
@@ -97,18 +99,18 @@ export default function LoginPage() {
                         style={{ ...styles.tab, ...(mode === "login" ? styles.tabActive : {}) }}
                         onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); }}
                     >
-                        Đăng nhập
+                        {t("loginTab")}
                     </button>
                     <button
                         style={{ ...styles.tab, ...(mode === "register" ? styles.tabActive : {}) }}
                         onClick={() => { setMode("register"); setError(""); setSuccessMsg(""); }}
                     >
-                        Đăng ký
+                        {t("registerTab")}
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} style={styles.form}>
-                    <label style={styles.label}>Email</label>
+                    <label style={styles.label}>{t("emailLabel")}</label>
                     <div style={styles.inputWrap}>
                         <span style={styles.inputIcon}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -129,7 +131,7 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <label style={styles.label}>Mật khẩu</label>
+                    <label style={styles.label}>{t("passwordLabel")}</label>
                     <div style={styles.inputWrap}>
                         <span style={styles.inputIcon}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -152,7 +154,7 @@ export default function LoginPage() {
 
                     {mode === "register" && (
                         <>
-                            <label style={styles.label}>Xác nhận mật khẩu</label>
+                            <label style={styles.label}>{t("confirmPasswordLabel")}</label>
                             <div style={styles.inputWrap}>
                                 <span style={styles.inputIcon}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -182,7 +184,7 @@ export default function LoginPage() {
                                 style={styles.forgotBtn}
                                 onClick={() => navigate("/forgot-password")}
                             >
-                                Quên mật khẩu?
+                                {t("forgotPasswordLink")}
                             </button>
                         </div>
                     )}
@@ -192,20 +194,20 @@ export default function LoginPage() {
 
                     <button type="submit" className="login-submit-btn" style={styles.submitBtn} disabled={loading}>
                         {loading
-                            ? "Đang xử lý..."
-                            : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
+                            ? t("processing")
+                            : mode === "login" ? t("loginSubmitBtn") : t("createAccountBtn")}
                     </button>
                 </form>
 
                 <div style={styles.guestRow}>
-                    <span style={styles.guestText}>Không muốn đăng ký? </span>
+                    <span style={styles.guestText}>{t("noAccountPrompt")}</span>
                     <button
                         type="button"
                         style={styles.guestBtn}
                         onClick={handleGuestLogin}
                         disabled={loading}
                     >
-                        Dùng thử với tư cách khách
+                        {t("guestLoginBtn")}
                     </button>
                 </div>
             </div>
@@ -221,7 +223,7 @@ const styles = {
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
-        backgroundImage: "linear-gradient(135deg, #dff7ff 0%, #bfe7ff 20%, #8ed0ff 45%, #abd7ff 70%, #d7f0ff 100%)",
+        backgroundImage: "linear-gradient(135deg, #dff7ff -50%, #bfe7ff 1%, #b8ddf7 -50%, #abd7ff 100%, #d7f0ff 200%)",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
         padding: "16px",
     },
@@ -264,7 +266,7 @@ const styles = {
     appName: {
         fontSize: "22px",
         fontWeight: "700",
-        color: "#fff",
+        color: "#3A6EA5",
         margin: "0 0 4px 0",
         letterSpacing: "-0.3px",
         textShadow: "0 1px 4px rgba(0,0,0,0.15)",
@@ -285,7 +287,7 @@ const styles = {
         border: "none",
         padding: "10px 0",
         fontSize: "14px",
-        color: "rgba(255,255,255,0.65)",
+        color: "#2E7BC4",
         cursor: "pointer",
         fontWeight: "500",
         borderBottom: "2px solid transparent",
@@ -293,7 +295,7 @@ const styles = {
         transition: "color 0.15s, border-color 0.15s",
     },
     tabActive: {
-        color: "#fff",
+        color: "#2E7BC4",
         borderBottomColor: "#fff",
     },
     form: {
@@ -304,7 +306,7 @@ const styles = {
     label: {
         fontSize: "13px",
         fontWeight: "500",
-        color: "rgba(255,255,255,0.85)",
+        color: "#4A85C0",
         marginBottom: "6px",
         marginTop: "14px",
     },
@@ -341,7 +343,7 @@ const styles = {
         background: "none",
         border: "none",
         fontSize: "13px",
-        color: "rgba(255,255,255,0.85)",
+        color: "#4A85C0",
         cursor: "pointer",
         padding: 0,
         textDecoration: "underline",

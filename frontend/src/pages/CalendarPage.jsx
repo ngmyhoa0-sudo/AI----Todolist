@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { getTodos } from "../services/todoService";
 import { getErrorMessage } from "../utils/errorMessage";
 import { useLanguage } from "../context/LanguageContext";
-
-const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+import { useTheme } from "../context/ThemeContext";
+import { THEMES } from "../theme";
 
 function formatKey(date) {
     const pad = (n) => String(n).padStart(2, "0");
@@ -23,6 +23,10 @@ function buildMonthGrid(year, month) {
 
 export default function CalendarPage() {
     const { t } = useLanguage();
+    const { theme } = useTheme();
+    const colors = THEMES[theme];
+    const WEEKDAYS = t("weekdaysShort");
+    const dateLocale = t("dateLocale");
     const [todos, setTodos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -67,7 +71,98 @@ export default function CalendarPage() {
     const goPrevMonth = () => setCursor(new Date(year, month - 1, 1));
     const goNextMonth = () => setCursor(new Date(year, month + 1, 1));
 
-    const monthLabel = cursor.toLocaleDateString("vi-VN", { month: "long", year: "numeric" });
+    const monthLabel = cursor.toLocaleDateString(dateLocale, { month: "long", year: "numeric" });
+
+    const styles = {
+        pageWrapper: {
+            position: "relative",
+        },
+        contentWrap: {
+            position: "relative",
+            zIndex: 1,
+        },
+        title: {
+            fontSize: "22px", fontWeight: "700", color: colors.heading,
+            margin: "0 0 20px 0", letterSpacing: "-0.3px",
+        },
+        loading: { textAlign: "center", color: colors.textMuted, fontSize: "14px", padding: "20px 0" },
+        error: {
+            fontSize: "13px", color: "#d0453a", padding: "10px 12px",
+            backgroundColor: "#fff5f5", borderRadius: "6px", border: "1px solid #fcc",
+        },
+        calendarCard: {
+            position: "relative",
+            padding: "0", marginBottom: "20px",
+        },
+        deskCalendarIcon: {
+            position: "absolute",
+            right: "10px",
+            bottom: "-50px",
+            width: "clamp(90px, 25vw, 180px)",
+            opacity: 0.1,
+            pointerEvents: "none",
+            transform: "scaleX(-1)",
+        },
+        clockIcon: {
+            position: "absolute",
+            left: "50px",
+            bottom: "110px",
+            width: "clamp(20px, 12vw, 60px)",
+            opacity: 0.1,
+            pointerEvents: "none",
+            transform: "scaleY(-1)",
+        },
+        calHeader: {
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: "12px",
+        },
+        navBtn: {
+            background: "none", border: "none", fontSize: "20px", color: colors.textMuted,
+            cursor: "pointer", padding: "4px 10px",
+        },
+        monthLabel: { fontSize: "15px", fontWeight: "700", color: colors.heading, textTransform: "capitalize" },
+        weekRow: {
+            display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
+            marginBottom: "4px",
+        },
+        weekday: { textAlign: "center", fontSize: "12px", color: colors.textMuted, padding: "4px 0" },
+        grid: {
+            display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px",
+        },
+        cellEmpty: { padding: "8px 0" },
+        cell: {
+            position: "relative", padding: "8px 0", fontSize: "13px", color: colors.text,
+            backgroundColor: "transparent", border: "none", borderRadius: "8px", cursor: "pointer",
+            outline: "none",
+            WebkitTapHighlightColor: "transparent",
+            forcedColorAdjust: "none",
+        },
+        cellSelected: { backgroundColor: "#6EC3F4", color: "#fff", fontWeight: "600" },
+        cellToday: { border: "1.61px solid #6EC3F4", fontWeight: "600" },
+        dot: {
+            position: "absolute", bottom: "2px", left: "50%", transform: "translateX(-50%)",
+            width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#4A9EFF",
+        },
+        taskListCard: {
+            backgroundColor: colors.cardBg,
+            borderRadius: "16px", padding: "16px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05)",
+        },
+        taskListTitle: {
+            fontSize: "14px", fontWeight: "700", color: colors.heading, margin: "0 0 12px 0",
+            textTransform: "capitalize",
+        },
+        empty: { textAlign: "center", color: colors.textMuted, fontSize: "13px", padding: "12px 0" },
+        taskItem: {
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "8px 0", borderBottom: `1px solid ${colors.border}`, fontSize: "13px",
+        },
+        taskDot: { width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 },
+        taskTitle: { flex: 1, color: colors.text },
+        taskTitleDone: { color: colors.textMuted, textDecoration: "line-through" },
+        taskTime: { fontSize: "12px", color: colors.textMuted },
+        repeatIcon: { fontSize: "12px" },
+    };
 
     return (
         <div style={styles.pageWrapper}>
@@ -75,7 +170,7 @@ export default function CalendarPage() {
             <div style={styles.contentWrap}>
                 <h1 style={styles.title}>{t("calendarPageTitle")}</h1>
 
-                {loading && <p style={styles.loading}>Đang tải...</p>}
+                {loading && <p style={styles.loading}>{t("loadingText")}</p>}
                 {error && <p style={styles.error}>{error}</p>}
 
                 {!loading && !error && (
@@ -125,21 +220,21 @@ export default function CalendarPage() {
 
                         <div style={styles.taskListCard}>
                             <h2 style={styles.taskListTitle}>
-                                {selectedDate.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit" })}
+                                {selectedDate.toLocaleDateString(dateLocale, { weekday: "long", day: "2-digit", month: "2-digit" })}
                             </h2>
                             {tasksForSelected.length === 0 && (
-                                <p style={styles.empty}>Không có task nào vào ngày này.</p>
+                                <p style={styles.empty}>{t("noTaskThisDay")}</p>
                             )}
-                            {tasksForSelected.map((t) => (
-                                <div key={t.id} style={styles.taskItem}>
-                                    <span style={{ ...styles.taskDot, backgroundColor: t.is_completed ? "#2d7a4f" : "#111" }} />
-                                    <span style={{ ...styles.taskTitle, ...(t.is_completed ? styles.taskTitleDone : {}) }}>
-                                        {t.title}
+                            {tasksForSelected.map((t2) => (
+                                <div key={t2.id} style={styles.taskItem}>
+                                    <span style={{ ...styles.taskDot, backgroundColor: t2.is_completed ? "#2d7a4f" : colors.text }} />
+                                    <span style={{ ...styles.taskTitle, ...(t2.is_completed ? styles.taskTitleDone : {}) }}>
+                                        {t2.title}
                                     </span>
                                     <span style={styles.taskTime}>
-                                        {new Date(t.deadline).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                        {new Date(t2.deadline).toLocaleTimeString(dateLocale, { hour: "2-digit", minute: "2-digit" })}
                                     </span>
-                                    {t.repeat_rule && <span style={styles.repeatIcon}>🔄</span>}
+                                    {t2.repeat_rule && <span style={styles.repeatIcon}>🔄</span>}
                                 </div>
                             ))}
                         </div>
@@ -149,93 +244,3 @@ export default function CalendarPage() {
         </div>
     );
 }
-
-const styles = {
-    pageWrapper: {
-        position: "relative",
-    },
-    contentWrap: {
-        position: "relative",
-        zIndex: 1,
-    },
-    title: {
-        fontSize: "22px", fontWeight: "700", color: "#1a2b4c",
-        margin: "0 0 20px 0", letterSpacing: "-0.3px",
-    },
-    loading: { textAlign: "center", color: "#999", fontSize: "14px", padding: "20px 0" },
-    error: {
-        fontSize: "13px", color: "#d0453a", padding: "10px 12px",
-        backgroundColor: "#fff5f5", borderRadius: "6px", border: "1px solid #fcc",
-    },
-    calendarCard: {
-        position: "relative",
-        padding: "0", marginBottom: "20px",
-    },
-    deskCalendarIcon: {
-        position: "absolute",
-        right: "10px",
-        bottom: "-50px",
-        width: "clamp(90px, 25vw, 180px)",
-        opacity: 0.1,
-        pointerEvents: "none",
-        transform: "scaleX(-1)",
-    },
-    clockIcon: {
-        position: "absolute",
-        left: "10px",
-        bottom: "6px",
-        width: "clamp(40px, 12vw, 80px)",
-        opacity: 0.18,
-        pointerEvents: "none",
-    },
-    calHeader: {
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        marginBottom: "12px",
-    },
-    navBtn: {
-        background: "none", border: "none", fontSize: "20px", color: "#444",
-        cursor: "pointer", padding: "4px 10px",
-    },
-    monthLabel: { fontSize: "15px", fontWeight: "700", color: "#1a2b4c", textTransform: "capitalize" },
-    weekRow: {
-        display: "grid", gridTemplateColumns: "repeat(7, 1fr)",
-        marginBottom: "4px",
-    },
-    weekday: { textAlign: "center", fontSize: "12px", color: "#999", padding: "4px 0" },
-    grid: {
-        display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px",
-    },
-    cellEmpty: { padding: "8px 0" },
-    cell: {
-        position: "relative", padding: "8px 0", fontSize: "13px", color: "#111",
-        backgroundColor: "transparent", border: "none", borderRadius: "8px", cursor: "pointer",
-        outline: "none",
-        WebkitTapHighlightColor: "transparent",
-        forcedColorAdjust: "none",
-    },
-    cellSelected: { backgroundColor: "#6EC3F4", color: "#fff", fontWeight: "600" },
-    cellToday: { border: "1px solid #6EC3F4", fontWeight: "600" },
-    dot: {
-        position: "absolute", bottom: "2px", left: "50%", transform: "translateX(-50%)",
-        width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#4A9EFF",
-    },
-    taskListCard: {
-        backgroundColor: "#fff",
-        borderRadius: "16px", padding: "16px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05)",
-    },
-    taskListTitle: {
-        fontSize: "14px", fontWeight: "700", color: "#1a2b4c", margin: "0 0 12px 0",
-        textTransform: "capitalize",
-    },
-    empty: { textAlign: "center", color: "#999", fontSize: "13px", padding: "12px 0" },
-    taskItem: {
-        display: "flex", alignItems: "center", gap: "8px",
-        padding: "8px 0", borderBottom: "1px solid #f5f5f5", fontSize: "13px",
-    },
-    taskDot: { width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 },
-    taskTitle: { flex: 1, color: "#111" },
-    taskTitleDone: { color: "#aaa", textDecoration: "line-through" },
-    taskTime: { fontSize: "12px", color: "#999" },
-    repeatIcon: { fontSize: "12px" },
-};

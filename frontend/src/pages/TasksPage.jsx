@@ -9,12 +9,15 @@ import { getErrorMessage } from "../utils/errorMessage";
 import { isOverdue } from "../utils/deadline";
 import { useTaskRefresh } from "../context/TaskRefreshContext";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
+import { THEMES } from "../theme";
 
 // TasksPage chỉ làm 1 việc: quản lý và hiển thị danh sách task
 export default function TasksPage() {
     const { version } = useTaskRefresh();
-
     const { t } = useLanguage();
+    const { theme } = useTheme();
+    const colors = THEMES[theme];
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
     const [loading, setLoading] = useState(true);
@@ -113,11 +116,49 @@ export default function TasksPage() {
         }
     }, [todos, filter]);
 
+    const styles = {
+        header: {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+        },
+        title: {
+            fontSize: "22px",
+            fontWeight: "700",
+            color: colors.heading,
+            margin: 0,
+            letterSpacing: "-0.3px",
+        },
+        guestBadge: {
+            display: "inline-block",
+            fontSize: "12px",
+            color: colors.textMuted,
+            backgroundColor: colors.cardBg,
+            padding: "2px 8px",
+            borderRadius: "10px",
+        },
+        loading: {
+            textAlign: "center",
+            color: colors.textMuted,
+            fontSize: "14px",
+            padding: "20px 0",
+        },
+        error: {
+            fontSize: "13px",
+            color: "#d0453a",
+            padding: "10px 12px",
+            backgroundColor: "#fff5f5",
+            borderRadius: "6px",
+            border: "1px solid #fcc",
+        },
+    };
+
     return (
         <div>
             <div style={styles.header}>
                 <h1 style={styles.title}>{t("taskPageTitle")}</h1>
-                {isGuest && <span style={styles.guestBadge}>Chế độ khách</span>}
+                {isGuest && <span style={styles.guestBadge}>{t("guestModeBadge")}</span>}
             </div>
 
             {!loading && <Notification todos={todos} />}
@@ -127,7 +168,7 @@ export default function TasksPage() {
 
             <FilterBar current={filter} onChange={setFilter} />
 
-            {loading && <p style={styles.loading}>Đang tải...</p>}
+            {loading && <p style={styles.loading}>{t("loadingText")}</p>}
             {error && <p style={styles.error}>{error}</p>}
             {!loading && (
                 <TodoList
@@ -139,41 +180,3 @@ export default function TasksPage() {
         </div>
     );
 }
-
-const styles = {
-    header: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "20px",
-    },
-    title: {
-        fontSize: "22px",
-        fontWeight: "700",
-        color: "#111",
-        margin: 0,
-        letterSpacing: "-0.3px",
-    },
-    guestBadge: {
-        display: "inline-block",
-        fontSize: "12px",
-        color: "#888",
-        backgroundColor: "#eee",
-        padding: "2px 8px",
-        borderRadius: "10px",
-    },
-    loading: {
-        textAlign: "center",
-        color: "#999",
-        fontSize: "14px",
-        padding: "20px 0",
-    },
-    error: {
-        fontSize: "13px",
-        color: "#d0453a",
-        padding: "10px 12px",
-        backgroundColor: "#fff5f5",
-        borderRadius: "6px",
-        border: "1px solid #fcc",
-    },
-};
