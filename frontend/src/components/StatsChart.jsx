@@ -9,14 +9,15 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
-import { getCompletedByDay, getCompletedByMonth } from "../services/statsService";
+import { getCompletedByDay, getCompletedByMonthDays, getCompletedByMonth } from "../services/statsService";
 import { getErrorMessage } from "../utils/errorMessage";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { THEMES } from "../theme";
+import PeriodNav from "./PeriodNav";
 
-// StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột số task hoàn thành theo tuần/tháng do StatsPage truyền xuống
-export default function StatsChart({ refreshTrigger, range, offset }) {
+// StatsChart chỉ làm 1 việc: hiển thị biểu đồ cột số task hoàn thành theo tuần/tháng/năm do StatsPage truyền xuống
+export default function StatsChart({ refreshTrigger, range, offset, onRangeChange, onOffsetChange, periodLabel }) {
     const { theme } = useTheme();
     const { t, language } = useLanguage();
     const colors = THEMES[theme];
@@ -46,6 +47,11 @@ export default function StatsChart({ refreshTrigger, range, offset }) {
                 const counts = res.data.counts;
                 setChartData(weekdays.map((label, i) => ({ name: label, count: counts[i] })));
                 setHasPrevYear(false);
+            } else if (range === "month") {
+                const res = await getCompletedByMonthDays(offset);
+                const counts = res.data.counts;
+                setChartData(counts.map((c, i) => ({ name: String(i + 1), count: c })));
+                setHasPrevYear(false);
             } else {
                 const res = await getCompletedByMonth(offset);
                 const { currentYear, currentCounts, prevYear, prevCounts } = res.data;
@@ -74,12 +80,6 @@ export default function StatsChart({ refreshTrigger, range, offset }) {
             marginBottom: "20px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
         },
-        title: {
-            fontSize: "15px",
-            fontWeight: "700",
-            color: colors.heading,
-            margin: "0 0 14px 0",
-        },
         loading: {
             textAlign: "center",
             color: "#999",
@@ -99,7 +99,13 @@ export default function StatsChart({ refreshTrigger, range, offset }) {
 
     return (
         <div style={styles.wrapper}>
-            <h3 style={styles.title}>{t("completedTasksChartTitle")}</h3>
+            <PeriodNav
+                range={range}
+                onRangeChange={onRangeChange}
+                offset={offset}
+                onOffsetChange={onOffsetChange}
+                periodLabel={periodLabel}
+            />
 
             {loading && <p style={styles.loading}>{t("loadingChart")}</p>}
             {error && <p style={styles.error}>{error}</p>}
@@ -114,8 +120,8 @@ export default function StatsChart({ refreshTrigger, range, offset }) {
                             contentStyle={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, color: colors.text }}
                             cursor={{ fill: colors.border, opacity: 0 }}
                         />
-                        {range === "month" && hasPrevYear && <Legend wrapperStyle={{ color: colors.text }} />}
-                        {range === "week" ? (
+                        {range === "year" && hasPrevYear && <Legend wrapperStyle={{ color: colors.text }} />}
+                        {range === "week" || range === "month" ? (
                             <Bar dataKey="count" name={t("completedTasks")} fill="#5b8def" radius={[6, 6, 0, 0]} />
                         ) : hasPrevYear ? (
                             <>

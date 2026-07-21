@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
 import { getErrorMessage } from "../utils/errorMessage";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
 
 export default function LoginPage() {
     const navigate = useNavigate();
     const { t } = useLanguage();
+    const { theme } = useTheme();
     const [mode, setMode] = useState("login");
     const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
     const [loading, setLoading] = useState(false);
@@ -64,6 +66,197 @@ export default function LoginPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const accentText = theme === "dark" ? "#9fd3ff" : "#3A6EA5";
+    const midText = theme === "dark" ? "#8EC3F4" : "#2E7BC4";
+    const lightText = theme === "dark" ? "#bcd9f7" : "#4A85C0";
+
+    const styles = {
+        page: {
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            overflow: "hidden",
+            backgroundImage: theme === "dark"
+                ? "linear-gradient(135deg, #0f1420 -50%, #141b2c 1%, #182238 -50%, #1b2947 100%, #10182a 200%)"
+                : "linear-gradient(135deg, #dff7ff -50%, #bfe7ff 1%, #b8ddf7 -50%, #abd7ff 100%, #d7f0ff 200%)",
+            fontFamily: "'Inter', 'Segoe UI', sans-serif",
+            padding: "16px",
+        },
+        waveSvg: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 0,
+            pointerEvents: "none",
+        },
+        card: {
+            position: "relative",
+            zIndex: 10,
+            backgroundColor: "transparent",
+            borderRadius: "12px",
+            padding: "40px 36px",
+            width: "100%",
+            maxWidth: "400px",
+            boxShadow: "none",
+        },
+        header: {
+            textAlign: "center",
+            marginBottom: "28px",
+        },
+        logo: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+            fontSize: "32px",
+            backgroundColor: "rgba(255,255,255,0.12)",
+            color: "#fff",
+            border: "2px solid rgba(255,255,255,0.55)",
+            borderRadius: "50%",
+            width: "84px",
+            height: "84px",
+        },
+        appName: {
+            fontSize: "22px",
+            fontWeight: "700",
+            color: accentText,
+            margin: "0 0 4px 0",
+            letterSpacing: "-0.3px",
+            textShadow: "0 1px 4px rgba(0,0,0,0.15)",
+        },
+        tagline: {
+            fontSize: "13px",
+            color: "rgba(255,255,255,0.85)",
+            margin: 0,
+        },
+        tabRow: {
+            display: "flex",
+            borderBottom: "1px solid rgba(255,255,255,0.3)",
+            marginBottom: "24px",
+        },
+        tab: {
+            flex: 1,
+            background: "none",
+            border: "none",
+            padding: "10px 0",
+            fontSize: "14px",
+            color: midText,
+            cursor: "pointer",
+            fontWeight: "500",
+            borderBottom: "2px solid transparent",
+            marginBottom: "-1px",
+            transition: "color 0.15s, border-color 0.15s",
+        },
+        tabActive: {
+            color: midText,
+            borderBottomColor: "#fff",
+        },
+        form: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "0px",
+        },
+        label: {
+            fontSize: "13px",
+            fontWeight: "500",
+            color: lightText,
+            marginBottom: "6px",
+            marginTop: "14px",
+        },
+        inputWrap: {
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+        },
+        inputIcon: {
+            position: "absolute",
+            left: "14px",
+            display: "flex",
+            color: "rgba(255,255,255,0.75)",
+            pointerEvents: "none",
+        },
+        input: {
+            width: "100%",
+            padding: "12px 16px 12px 40px",
+            border: "1.5px solid rgba(255,255,255,0.5)",
+            borderRadius: "999px",
+            fontSize: "14px",
+            color: "#fff",
+            outline: "none",
+            backgroundColor: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(15px)",
+            WebkitBackdropFilter: "blur(15px)",
+            transition: "border-color 0.15s, background-color 0.15s",
+        },
+        forgotRow: {
+            textAlign: "right",
+            marginTop: "8px",
+        },
+        forgotBtn: {
+            background: "none",
+            border: "none",
+            fontSize: "13px",
+            color: lightText,
+            cursor: "pointer",
+            padding: 0,
+            textDecoration: "underline",
+        },
+        error: {
+            fontSize: "13px",
+            color: "#b3261e",
+            marginTop: "12px",
+            marginBottom: "0",
+            padding: "10px 12px",
+            backgroundColor: "rgba(255,255,255,0.9)",
+            borderRadius: "6px",
+            border: "1px solid rgba(255,255,255,0.6)",
+        },
+        success: {
+            fontSize: "13px",
+            color: "#1e6b3e",
+            marginTop: "12px",
+            marginBottom: "0",
+            padding: "10px 12px",
+            backgroundColor: "rgba(255,255,255,0.9)",
+            borderRadius: "6px",
+            border: "1px solid rgba(255,255,255,0.6)",
+        },
+        submitBtn: {
+            marginTop: "20px",
+            padding: "13px",
+            backgroundColor: "#fff",
+            color: "#2E7BC4",
+            border: "none",
+            borderRadius: "999px",
+            fontSize: "15px",
+            fontWeight: "700",
+            cursor: "pointer",
+            letterSpacing: "0.3px",
+            transition: "background-color 0.15s, transform 0.15s",
+        },
+        guestRow: {
+            textAlign: "center",
+            marginTop: "20px",
+            fontSize: "13px",
+        },
+        guestText: {
+            color: "rgba(255,255,255,0.75)",
+        },
+        guestBtn: {
+            background: "none",
+            border: "none",
+            fontSize: "13px",
+            color: "#fff",
+            cursor: "pointer",
+            padding: 0,
+            textDecoration: "underline",
+        },
     };
 
     return (
@@ -214,188 +407,3 @@ export default function LoginPage() {
         </div>
     );
 }
-
-const styles = {
-    page: {
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        overflow: "hidden",
-        backgroundImage: "linear-gradient(135deg, #dff7ff -50%, #bfe7ff 1%, #b8ddf7 -50%, #abd7ff 100%, #d7f0ff 200%)",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        padding: "16px",
-    },
-    waveSvg: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 0,
-        pointerEvents: "none",
-    },
-    card: {
-        position: "relative",
-        zIndex: 10,
-        backgroundColor: "transparent",
-        borderRadius: "12px",
-        padding: "40px 36px",
-        width: "100%",
-        maxWidth: "400px",
-        boxShadow: "none",
-    },
-    header: {
-        textAlign: "center",
-        marginBottom: "28px",
-    },
-    logo: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        margin: "0 auto 16px",
-        fontSize: "32px",
-        backgroundColor: "rgba(255,255,255,0.12)",
-        color: "#fff",
-        border: "2px solid rgba(255,255,255,0.55)",
-        borderRadius: "50%",
-        width: "84px",
-        height: "84px",
-    },
-    appName: {
-        fontSize: "22px",
-        fontWeight: "700",
-        color: "#3A6EA5",
-        margin: "0 0 4px 0",
-        letterSpacing: "-0.3px",
-        textShadow: "0 1px 4px rgba(0,0,0,0.15)",
-    },
-    tagline: {
-        fontSize: "13px",
-        color: "rgba(255,255,255,0.85)",
-        margin: 0,
-    },
-    tabRow: {
-        display: "flex",
-        borderBottom: "1px solid rgba(255,255,255,0.3)",
-        marginBottom: "24px",
-    },
-    tab: {
-        flex: 1,
-        background: "none",
-        border: "none",
-        padding: "10px 0",
-        fontSize: "14px",
-        color: "#2E7BC4",
-        cursor: "pointer",
-        fontWeight: "500",
-        borderBottom: "2px solid transparent",
-        marginBottom: "-1px",
-        transition: "color 0.15s, border-color 0.15s",
-    },
-    tabActive: {
-        color: "#2E7BC4",
-        borderBottomColor: "#fff",
-    },
-    form: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "0px",
-    },
-    label: {
-        fontSize: "13px",
-        fontWeight: "500",
-        color: "#4A85C0",
-        marginBottom: "6px",
-        marginTop: "14px",
-    },
-    inputWrap: {
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-    },
-    inputIcon: {
-        position: "absolute",
-        left: "14px",
-        display: "flex",
-        color: "rgba(255,255,255,0.75)",
-        pointerEvents: "none",
-    },
-    input: {
-        width: "100%",
-        padding: "12px 16px 12px 40px",
-        border: "1.5px solid rgba(255,255,255,0.5)",
-        borderRadius: "999px",
-        fontSize: "14px",
-        color: "#fff",
-        outline: "none",
-        backgroundColor: "rgba(255,255,255,0.08)",
-        backdropFilter: "blur(15px)",
-        WebkitBackdropFilter: "blur(15px)",
-        transition: "border-color 0.15s, background-color 0.15s",
-    },
-    forgotRow: {
-        textAlign: "right",
-        marginTop: "8px",
-    },
-    forgotBtn: {
-        background: "none",
-        border: "none",
-        fontSize: "13px",
-        color: "#4A85C0",
-        cursor: "pointer",
-        padding: 0,
-        textDecoration: "underline",
-    },
-    error: {
-        fontSize: "13px",
-        color: "#b3261e",
-        marginTop: "12px",
-        marginBottom: "0",
-        padding: "10px 12px",
-        backgroundColor: "rgba(255,255,255,0.9)",
-        borderRadius: "6px",
-        border: "1px solid rgba(255,255,255,0.6)",
-    },
-    success: {
-        fontSize: "13px",
-        color: "#1e6b3e",
-        marginTop: "12px",
-        marginBottom: "0",
-        padding: "10px 12px",
-        backgroundColor: "rgba(255,255,255,0.9)",
-        borderRadius: "6px",
-        border: "1px solid rgba(255,255,255,0.6)",
-    },
-    submitBtn: {
-        marginTop: "20px",
-        padding: "13px",
-        backgroundColor: "#fff",
-        color: "#2E7BC4",
-        border: "none",
-        borderRadius: "999px",
-        fontSize: "15px",
-        fontWeight: "700",
-        cursor: "pointer",
-        letterSpacing: "0.3px",
-        transition: "background-color 0.15s, transform 0.15s",
-    },
-    guestRow: {
-        textAlign: "center",
-        marginTop: "20px",
-        fontSize: "13px",
-    },
-    guestText: {
-        color: "rgba(255,255,255,0.75)",
-    },
-    guestBtn: {
-        background: "none",
-        border: "none",
-        fontSize: "13px",
-        color: "#fff",
-        cursor: "pointer",
-        padding: 0,
-        textDecoration: "underline",
-    },
-};

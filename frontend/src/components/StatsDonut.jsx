@@ -5,11 +5,12 @@ import { getErrorMessage } from "../utils/errorMessage";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { THEMES } from "../theme";
+import PeriodNav from "./PeriodNav";
 
 const COLORS = { completed: "#8EC3F4", active: "#2E7BC4", overdue: "#c0392b" };
 
 // StatsDonut chỉ làm 1 việc: hiển thị tỉ lệ % Hoàn thành/Đang làm/Quá hạn trong đúng kỳ (tuần/năm) do StatsPage truyền xuống
-export default function StatsDonut({ refreshTrigger, range, offset }) {
+export default function StatsDonut({ refreshTrigger, range, offset, onRangeChange, onOffsetChange, periodLabel }) {
     const { theme } = useTheme();
     const { t } = useLanguage();
     const colors = THEMES[theme];
@@ -39,35 +40,43 @@ export default function StatsDonut({ refreshTrigger, range, offset }) {
         }
     };
 
-    if (loading) return <p style={styles.loading}>{t("loadingChart")}</p>;
-    if (error) return <p style={styles.error}>{error}</p>;
-    if (!stats) return null;
-
-    const data = [
-        { name: t("completedTasks"), value: stats.completed ?? 0, color: COLORS.completed },
-        { name: t("activeTasks"), value: stats.active ?? 0, color: COLORS.active },
-        { name: t("overdueTasks"), value: stats.overdue ?? 0, color: COLORS.overdue },
-    ];
-    const hasData = data.some((d) => d.value > 0);
-
     return (
         <div style={{ ...styles.wrapper, backgroundColor: colors.cardBg }}>
-            <h3 style={{ ...styles.title, color: colors.heading }}>{t("statusRatioTitle")}</h3>
-            {!hasData ? (
-                <p style={{ ...styles.empty, color: colors.textMuted }}>{t("noDataMsg")}</p>
-            ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                        <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={0}>
-                            {data.map((entry) => (
-                                <Cell key={entry.name} fill={entry.color} stroke={colors.cardBg} strokeWidth={2} />
-                            ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, color: colors.text }} />
-                        <Legend wrapperStyle={{ color: colors.text }} />
-                    </PieChart>
-                </ResponsiveContainer>
-            )}
+            <PeriodNav
+                range={range}
+                onRangeChange={onRangeChange}
+                offset={offset}
+                onOffsetChange={onOffsetChange}
+                periodLabel={periodLabel}
+            />
+
+            {loading && <p style={styles.loading}>{t("loadingChart")}</p>}
+            {error && <p style={styles.error}>{error}</p>}
+
+            {!loading && !error && (() => {
+                const data = [
+                    { name: t("completedTasks"), value: stats?.completed ?? 0, color: COLORS.completed },
+                    { name: t("activeTasks"), value: stats?.active ?? 0, color: COLORS.active },
+                    { name: t("overdueTasks"), value: stats?.overdue ?? 0, color: COLORS.overdue },
+                ];
+                const hasData = data.some((d) => d.value > 0);
+
+                return !hasData ? (
+                    <p style={{ ...styles.empty, color: colors.textMuted }}>{t("noDataMsg")}</p>
+                ) : (
+                    <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                            <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={0}>
+                                {data.map((entry) => (
+                                    <Cell key={entry.name} fill={entry.color} stroke={colors.cardBg} strokeWidth={2} />
+                                ))}
+                            </Pie>
+                            <Tooltip contentStyle={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}`, color: colors.text }} />
+                            <Legend wrapperStyle={{ color: colors.text }} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                );
+            })()}
         </div>
     );
 }
@@ -78,11 +87,6 @@ const styles = {
         padding: "20px",
         marginBottom: "20px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
-    },
-    title: {
-        fontSize: "15px",
-        fontWeight: "700",
-        margin: "0 0 14px 0",
     },
     empty: {
         textAlign: "center",

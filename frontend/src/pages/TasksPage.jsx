@@ -20,6 +20,7 @@ export default function TasksPage() {
     const colors = THEMES[theme];
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
+    const [sortMode, setSortMode] = useState("asc");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [naturalAddError, setNaturalAddError] = useState("");
@@ -101,20 +102,48 @@ export default function TasksPage() {
         }
     };
 
+    const handleEdit = async (id, updates) => {
+        try {
+            await updateTodo(id, updates);
+            await loadTodos();
+        } catch (err) {
+            setError(getErrorMessage(err));
+        }
+    };
+
     const filteredTodos = useMemo(() => {
         switch (filter) {
             case "active":
                 return todos.filter((t) => !t.is_completed && !isOverdue(t));
             case "done":
                 return todos.filter((t) => t.is_completed);
-            case "deadline":
+            case "deadline": {
+                if (sortMode === "newest") {
+                    return [...todos].sort((a, b) => b.id - a.id);
+                }
                 return [...todos]
                     .filter((t) => t.deadline)
-                    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+                    .sort((a, b) =>
+                        sortMode === "desc"
+                            ? new Date(b.deadline) - new Date(a.deadline)
+                            : new Date(a.deadline) - new Date(b.deadline)
+                    );
+            }
+            case "all":
+                return [...todos].sort((a, b) => {
+                    // Đã xong luôn bị đẩy xuống cuối cùng
+                    if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
+                    if (!a.is_completed) {
+                        // Trong nhóm chưa xong: có deadline lên trước, không có deadline xuống sau
+                        if (!!a.deadline !== !!b.deadline) return a.deadline ? -1 : 1;
+                        if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+                    }
+                    return 0;
+                });
             default:
                 return todos;
         }
-    }, [todos, filter]);
+    }, [todos, filter, sortMode]);
 
     const styles = {
         header: {
@@ -166,7 +195,12 @@ export default function TasksPage() {
             <AddTaskForm onAdd={handleAdd} onAddNatural={handleAddNatural} />
             {naturalAddError && <p style={styles.error}>{naturalAddError}</p>}
 
-            <FilterBar current={filter} onChange={setFilter} />
+            <FilterBar
+                current={filter}
+                onChange={setFilter}
+                sortMode={sortMode}
+                onSortModeChange={setSortMode}
+            />
 
             {loading && <p style={styles.loading}>{t("loadingText")}</p>}
             {error && <p style={styles.error}>{error}</p>}
@@ -175,6 +209,7 @@ export default function TasksPage() {
                     todos={filteredTodos}
                     onToggle={handleToggle}
                     onDelete={handleDelete}
+                    onEdit={handleEdit}
                 />
             )}
         </div>

@@ -4,7 +4,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { THEMES } from "../theme";
 
 // TodoList chỉ làm 1 việc: hiển thị danh sách task, không tự gọi API
-export default function TodoList({ todos, onToggle, onDelete }) {
+export default function TodoList({ todos, onToggle, onDelete, onEdit }) {
     const { theme } = useTheme();
     const { t } = useLanguage();
     const colors = THEMES[theme];
@@ -20,6 +20,7 @@ export default function TodoList({ todos, onToggle, onDelete }) {
                     todo={todo}
                     onToggle={onToggle}
                     onDelete={onDelete}
+                    onEdit={onEdit}
                 />
             ))}
         </ul>

@@ -17,6 +17,14 @@ function getWeekRange(offset) {
     return { start, end };
 }
 
+function getMonthLabelParts(offset) {
+    const now = new Date();
+    const totalMonths = now.getFullYear() * 12 + now.getMonth() + offset;
+    const year = Math.floor(totalMonths / 12);
+    const month = totalMonths % 12;
+    return { year, month };
+}
+
 function formatShortDate(d) {
     const pad = (n) => String(n).padStart(2, "0");
     return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
@@ -42,6 +50,11 @@ export default function StatsPage() {
             const { start, end } = getWeekRange(offset);
             return `${formatShortDate(start)} - ${formatShortDate(end)}`;
         }
+        if (range === "month") {
+            if (offset === 0) return t("thisMonth");
+            const { year, month } = getMonthLabelParts(offset);
+            return `${t("monthRange")} ${month + 1}/${year}`;
+        }
         if (offset === 0) return t("thisYear");
         return `${t("yearLabel")} ${new Date().getFullYear() + offset}`;
     })();
@@ -56,8 +69,17 @@ export default function StatsPage() {
         },
         toggleRow: {
             display: "flex",
-            justifyContent: "flex-end",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "10px",
             marginBottom: "12px",
+        },
+        chartTitle: {
+            fontSize: "15px",
+            fontWeight: "700",
+            color: colors.heading,
+            margin: 0,
         },
         toggleContainer: {
             display: "inline-flex",
@@ -85,58 +107,6 @@ export default function StatsPage() {
             backgroundColor: "#d7ecfb",
             color: "#2E7BC4",
         },
-        periodRow: {
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "10px",
-            marginBottom: "12px",
-        },
-        rangeRow: {
-            display: "flex",
-            gap: "4px",
-            backgroundColor: colors.cardBg,
-            borderRadius: "999px",
-            padding: "3px",
-        },
-        rangeBtn: {
-            padding: "5px 12px",
-            fontSize: "12px",
-            fontWeight: "600",
-            border: "none",
-            borderRadius: "999px",
-            backgroundColor: "transparent",
-            color: colors.textMuted,
-            cursor: "pointer",
-        },
-        rangeBtnActive: {
-            backgroundColor: "#6EC3F4",
-            color: "#fff",
-        },
-        navRow: {
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            backgroundColor: colors.cardBg,
-            borderRadius: "999px",
-            padding: "4px 8px",
-        },
-        navBtn: {
-            background: "none",
-            border: "none",
-            fontSize: "16px",
-            color: colors.textMuted,
-            cursor: "pointer",
-            padding: "2px 6px",
-        },
-        navLabel: {
-            fontSize: "13px",
-            fontWeight: "600",
-            color: colors.text,
-            minWidth: "110px",
-            textAlign: "center",
-        },
     };
 
     return (
@@ -145,6 +115,9 @@ export default function StatsPage() {
             <StatsCard refreshTrigger={version} />
 
             <div style={styles.toggleRow}>
+                <h3 style={styles.chartTitle}>
+                    {view === "trend" ? t("completedTasksChartTitle") : t("statusRatioTitle")}
+                </h3>
                 <div style={styles.toggleContainer}>
                     <button
                         type="button"
@@ -172,44 +145,24 @@ export default function StatsPage() {
                 </div>
             </div>
 
-            <div style={styles.periodRow}>
-                <div style={styles.rangeRow}>
-                    <button
-                        type="button"
-                        style={{ ...styles.rangeBtn, ...(range === "week" ? styles.rangeBtnActive : {}) }}
-                        onClick={() => changeRange("week")}
-                    >
-                        {t("weekRange")}
-                    </button>
-                    <button
-                        type="button"
-                        style={{ ...styles.rangeBtn, ...(range === "month" ? styles.rangeBtnActive : {}) }}
-                        onClick={() => changeRange("month")}
-                    >
-                        {t("monthRange")}
-                    </button>
-                </div>
-
-                <div style={styles.navRow}>
-                    <button type="button" style={styles.navBtn} onClick={() => setOffset((o) => o - 1)}>
-                        ‹
-                    </button>
-                    <span style={styles.navLabel}>{periodLabel}</span>
-                    <button
-                        type="button"
-                        style={{ ...styles.navBtn, ...(offset >= 0 ? { opacity: 0.3, cursor: "default" } : {}) }}
-                        onClick={() => offset < 0 && setOffset((o) => o + 1)}
-                        disabled={offset >= 0}
-                    >
-                        ›
-                    </button>
-                </div>
-            </div>
-
             {view === "trend" ? (
-                <StatsChart refreshTrigger={version} range={range} offset={offset} />
+                <StatsChart
+                    refreshTrigger={version}
+                    range={range}
+                    offset={offset}
+                    onRangeChange={changeRange}
+                    onOffsetChange={setOffset}
+                    periodLabel={periodLabel}
+                />
             ) : (
-                <StatsDonut refreshTrigger={version} range={range} offset={offset} />
+                <StatsDonut
+                    refreshTrigger={version}
+                    range={range}
+                    offset={offset}
+                    onRangeChange={changeRange}
+                    onOffsetChange={setOffset}
+                    periodLabel={periodLabel}
+                />
             )}
         </div>
     );
