@@ -76,10 +76,7 @@ body {
     top: 10px;
 }
 
-/* Xếp khung giờ nằm bên cạnh lịch (chung 1 khối, không tách rời) */
-.react-datepicker {
-    display: flex !important;
-}
+
 
 .react-datepicker__input-time-container {
     margin: 0 !important;
@@ -148,4 +145,60 @@ body {
 /* Ẩn chữ "Time" phía trên 2 cột giờ/phút */
 .react-datepicker-time__caption {
     display: none !important;
+}
+.custom-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid #b9c3d6;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+    .custom-checkbox:checked {
+        background-color: #6EC3F4;
+        border-color: #6EC3F4;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+        background-size: 65%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+.react-datepicker {
+    display: grid !important;
+    grid-template-columns: auto auto;
+}
+.react-datepicker__children-container {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+/* Ngày hôm nay: viền xanh bao quanh, không in đậm, không tô nền đặc */
+.react-datepicker__day--today {
+    font-weight: 400 !important;
+    border: 1.5px solid #6EC3F4 !important;
+    border-radius: 0.3rem !important;
+    box-sizing: border-box;
+}
+
+.app-datepicker-dark .react-datepicker__day--today {
+    border-color: #5b8def !important;
+}
+.react-datepicker__day-name {
+    font-weight: 400 !important;
+    font-family: 'Inter', 'Segoe UI', sans-serif !important;
+}
+
+.react-datepicker__day {
+    font-weight: 400 !important;
+    font-family: 'Inter', 'Segoe UI', sans-serif !important;
 }

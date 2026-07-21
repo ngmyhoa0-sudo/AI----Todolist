@@ -1,12 +1,8 @@
-import { useState, useRef, useEffect, forwardRef } from "react";
-import DatePicker, { registerLocale } from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { vi } from "date-fns/locale/vi";
-import { useTheme } from "../context/ThemeContext";
+import { useState } from "react";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
 import { THEMES } from "../theme";
-
-registerLocale("vi", vi);
+import DeadlinePicker from "./DeadlinePicker";
 
 // Tên task hợp lệ khi chứa ít nhất 1 ký tự chữ/số
 const HAS_ALPHANUMERIC = /[\p{L}\p{N}]/u;
@@ -16,24 +12,13 @@ function getQuickDate(preset) {
     if (preset === "tomorrow") d.setDate(d.getDate() + 1);
     if (preset === "weekend") {
         const day = d.getDay();
-        const diff = (6 - day + 7) % 7 || 7;
+        const diff = (0 - day + 7) % 7 || 7;
         d.setDate(d.getDate() + diff);
     }
     if (preset === "nextweek") d.setDate(d.getDate() + 7);
-    d.setHours(9, 0, 0, 0);
+    if (preset !== "today") d.setHours(9, 0, 0, 0);
     const pad = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function stringToDate(str) {
-    if (!str) return null;
-    return new Date(str);
-}
-
-function dateToString(date) {
-    if (!date) return "";
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 const QUICK_OPTIONS = [
@@ -43,93 +28,10 @@ const QUICK_OPTIONS = [
     { key: "nextweek", labelKey: "nextWeekOpt" },
 ];
 
-// Nút hiển thị ngày giờ đã chọn, dùng để thay input datetime-local gốc
-const DateInput = forwardRef(({ value, onClick, placeholder, style }, ref) => (
-    <button
-        type="button"
-        ref={ref}
-        onClick={onClick}
-        style={{
-            ...style,
-            appearance: "none",
-            WebkitAppearance: "none",
-            MozAppearance: "none",
-            fontFamily: "inherit",
-            textAlign: "left",
-            width: "100%",
-            display: "block",
-        }}
-    >
-        {value || placeholder}
-    </button>
-));
-
-// 2 cột giờ/phút cuộn riêng, xếp bên cạnh lịch giống kiểu native
-function CustomTimeInput({ value, onChange, colors }) {
-    const [h, m] = (value || "00:00").split(":");
-    const hour = parseInt(h, 10) || 0;
-    const minute = parseInt(m, 10) || 0;
-    const hourRef = useRef(null);
-    const minuteRef = useRef(null);
-
-    useEffect(() => {
-        hourRef.current?.scrollIntoView({ block: "center" });
-        minuteRef.current?.scrollIntoView({ block: "center" });
-    }, []);
-
-    const pad = (n) => String(n).padStart(2, "0");
-    const emitHour = (newHour) => onChange(`${pad(newHour)}:${pad(minute)}`);
-    const emitMinute = (newMinute) => onChange(`${pad(hour)}:${pad(newMinute)}`);
-
-    const columnStyle = {
-        maxHeight: "200px",
-        overflowY: "auto",
-        width: "50px",
-    };
-    const itemStyle = (active) => ({
-        padding: "6px 0",
-        textAlign: "center",
-        fontSize: "13px",
-        cursor: "pointer",
-        borderRadius: "4px",
-        backgroundColor: active ? "#6EC3F4" : "transparent",
-        color: active ? "#fff" : colors.text,
-    });
-
-    return (
-        <div style={{ display: "flex", gap: "4px", padding: "10px", borderLeft: `1px solid ${colors.border}`, height: "100%" }}>
-            <div className="time-scroll-col" style={columnStyle}>
-                {Array.from({ length: 24 }, (_, i) => (
-                    <div
-                        key={i}
-                        ref={i === hour ? hourRef : null}
-                        style={itemStyle(i === hour)}
-                        onClick={() => emitHour(i)}
-                    >
-                        {pad(i)}
-                    </div>
-                ))}
-            </div>
-            <div className="time-scroll-col" style={columnStyle}>
-                {Array.from({ length: 60 }, (_, i) => (
-                    <div
-                        key={i}
-                        ref={i === minute ? minuteRef : null}
-                        style={itemStyle(i === minute)}
-                        onClick={() => emitMinute(i)}
-                    >
-                        {pad(i)}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 // AddTaskForm chỉ làm 1 việc: nhận input task mới (2 chế độ: thường / AI) rồi gửi qua onAdd
 export default function AddTaskForm({ onAdd, onAddNatural }) {
     const { theme } = useTheme();
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const colors = THEMES[theme];
     const [mode, setMode] = useState("normal"); // "normal" | "ai"
     const [text, setText] = useState("");
@@ -194,8 +96,7 @@ export default function AddTaskForm({ onAdd, onAddNatural }) {
         deadlineInput: {
             padding: "8px 12px", border: `1px solid ${colors.border}`,
             borderRadius: "7px", fontSize: "13px", color: colors.text,
-            outline: "none", backgroundColor: colors.inputBg, textAlign: "left",
-            alignSelf: "flex-start", cursor: "pointer", minWidth: "180px",
+            outline: "none", backgroundColor: colors.inputBg,
         },
     };
 
@@ -250,18 +151,7 @@ export default function AddTaskForm({ onAdd, onAddNatural }) {
                         ))}
                     </div>
                     <label style={styles.deadlineLabel}>{t("specificDateLabel")}</label>
-                    <DatePicker
-                        selected={stringToDate(deadline)}
-                        onChange={(date) => setDeadline(dateToString(date))}
-                        showTimeInput
-                        timeCaption={t("timeCaption")}
-                        customTimeInput={<CustomTimeInput colors={colors} />}
-                        dateFormat="dd/MM/yyyy HH:mm"
-                        placeholderText={t("specificDateLabel")}
-                        locale={language === "vi" ? "vi" : "en-US"}
-                        calendarClassName={theme === "dark" ? "app-datepicker-dark" : ""}
-                        customInput={<DateInput style={styles.deadlineInput} />}
-                    />
+                    <DeadlinePicker value={deadline} onChange={setDeadline} />
 
                     <label style={styles.deadlineLabel}>{t("repeatLabel")}</label>
                     <select

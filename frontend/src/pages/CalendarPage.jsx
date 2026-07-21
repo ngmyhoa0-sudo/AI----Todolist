@@ -5,6 +5,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
 import { THEMES } from "../theme";
 
+const PASTEL_COLORS = ["#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF", "#D7BAFF", "#FFBAF0"];
 function formatKey(date) {
     const pad = (n) => String(n).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -66,7 +67,10 @@ export default function CalendarPage() {
     const cells = useMemo(() => buildMonthGrid(year, month), [year, month]);
 
     const selectedKey = formatKey(selectedDate);
-    const tasksForSelected = tasksByDate[selectedKey] || [];
+    const tasksForSelected = useMemo(() => {
+        const list = tasksByDate[selectedKey] || [];
+        return [...list].sort((a, b) => (a.is_completed === b.is_completed ? 0 : a.is_completed ? 1 : -1));
+    }, [tasksByDate, selectedKey]);
 
     const goPrevMonth = () => setCursor(new Date(year, month - 1, 1));
     const goNextMonth = () => setCursor(new Date(year, month + 1, 1));
@@ -158,8 +162,9 @@ export default function CalendarPage() {
             padding: "8px 0", borderBottom: `1px solid ${colors.border}`, fontSize: "13px",
         },
         taskDot: { width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 },
+        taskCheckIcon: { width: "14px", height: "14px", flexShrink: 0, color: "#8EC3F4" },
         taskTitle: { flex: 1, color: colors.text },
-        taskTitleDone: { color: colors.textMuted, textDecoration: "line-through" },
+        taskTitleDone: { color: colors.textMuted },
         taskTime: { fontSize: "12px", color: colors.textMuted },
         repeatIcon: { fontSize: "12px" },
     };
@@ -225,9 +230,15 @@ export default function CalendarPage() {
                             {tasksForSelected.length === 0 && (
                                 <p style={styles.empty}>{t("noTaskThisDay")}</p>
                             )}
-                            {tasksForSelected.map((t2) => (
+                            {tasksForSelected.map((t2, idx) => (
                                 <div key={t2.id} style={styles.taskItem}>
-                                    <span style={{ ...styles.taskDot, backgroundColor: t2.is_completed ? "#2d7a4f" : colors.text }} />
+                                    {t2.is_completed ? (
+                                        <svg style={styles.taskCheckIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    ) : (
+                                        <span style={{ ...styles.taskDot, backgroundColor: PASTEL_COLORS[idx % PASTEL_COLORS.length] }} />
+                                    )}
                                     <span style={{ ...styles.taskTitle, ...(t2.is_completed ? styles.taskTitleDone : {}) }}>
                                         {t2.title}
                                     </span>

@@ -3,14 +3,17 @@ import { isOverdue } from "../utils/deadline";
 import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { THEMES } from "../theme";
+import EditTaskModal from "./EditTaskModal";
 
 // TodoItem chỉ làm 1 việc: hiển thị 1 task đơn lẻ
-export default function TodoItem({ todo, onToggle, onDelete }) {
+export default function TodoItem({ todo, onToggle, onDelete, onEdit }) {
     const { theme } = useTheme();
     const { t } = useLanguage();
     const colors = THEMES[theme];
     const [deleteHover, setDeleteHover] = useState(false);
+    const [editHover, setEditHover] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
     const overdue = isOverdue(todo);
 
     const handleConfirmDelete = () => {
@@ -26,11 +29,11 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
         },
         checkbox: { width: "16px", height: "16px", cursor: "pointer", flexShrink: 0 },
         title: { flex: 1, fontSize: "14px", color: colors.text },
-        titleDone: { color: colors.textMuted, textDecoration: "line-through" },
-        titleOverdue: { color: "#d0453a", textDecoration: "line-through" },
-        deadline: { fontSize: "12px", color: colors.textMuted, whiteSpace: "nowrap" },
+        titleDone: { color: colors.textMuted, opacity: 0.55 },
+        titleOverdue: { color: "#d0453a" },
+        deadline: { fontSize: "12px", whiteSpace: "nowrap" },
         deadlineRepeat: { color: "#7c4dff", fontWeight: "600" },
-        deleteBtn: {
+        iconBtn: {
             backgroundColor: colors.cardBg, border: "none", color: colors.heading,
             fontSize: "13px", cursor: "pointer",
             width: "44px", height: "44px", padding: "4px",
@@ -38,7 +41,7 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
             justifyContent: "center", flexShrink: 0,
             transition: "background-color 0.15s ease",
         },
-        deleteBtnHover: { backgroundColor: colors.inputBg },
+        iconBtnHover: { backgroundColor: colors.inputBg },
         overlay: {
             position: "fixed", inset: 0,
             backgroundColor: "rgba(0,0,0,0.35)",
@@ -89,23 +92,25 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
         },
     };
 
+    const textColorStyle = {
+        ...(todo.is_completed ? styles.titleDone : {}),
+        ...(overdue ? styles.titleOverdue : {}),
+    };
+
     return (
         <li style={styles.item}>
             <input
                 type="checkbox"
+                className="custom-checkbox"
                 checked={todo.is_completed}
                 onChange={() => onToggle(todo.id, todo.is_completed)}
                 style={styles.checkbox}
             />
-            <span style={{
-                ...styles.title,
-                ...(todo.is_completed ? styles.titleDone : {}),
-                ...(overdue ? styles.titleOverdue : {}),
-            }}>
+            <span style={{ ...styles.title, ...textColorStyle }}>
                 {todo.title}
             </span>
             {todo.deadline && (
-                <span style={{ ...styles.deadline, ...(todo.repeat_rule ? styles.deadlineRepeat : {}) }}>
+                <span style={{ ...styles.deadline, ...textColorStyle, ...(todo.repeat_rule ? styles.deadlineRepeat : {}) }}>
                     {todo.repeat_rule && "🔄 "}
                     {new Date(todo.deadline).toLocaleString(t("dateLocale"), {
                         day: "2-digit",
@@ -118,10 +123,20 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
             )}
             <button
                 type="button"
+                onClick={() => setEditOpen(true)}
+                onMouseEnter={() => setEditHover(true)}
+                onMouseLeave={() => setEditHover(false)}
+                style={{ ...styles.iconBtn, ...(editHover ? styles.iconBtnHover : {}) }}
+                aria-label={t("editBtn")}
+            >
+                {t("editBtn")}
+            </button>
+            <button
+                type="button"
                 onClick={() => setConfirmOpen(true)}
                 onMouseEnter={() => setDeleteHover(true)}
                 onMouseLeave={() => setDeleteHover(false)}
-                style={{ ...styles.deleteBtn, ...(deleteHover ? styles.deleteBtnHover : {}) }}
+                style={{ ...styles.iconBtn, ...(deleteHover ? styles.iconBtnHover : {}) }}
                 aria-label={t("deleteBtn")}
             >
                 {t("deleteBtn")}
@@ -141,6 +156,14 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {editOpen && (
+                <EditTaskModal
+                    todo={todo}
+                    onSave={onEdit}
+                    onClose={() => setEditOpen(false)}
+                />
             )}
         </li>
     );

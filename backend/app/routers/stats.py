@@ -30,6 +30,15 @@ def _week_bounds(offset: int):
     end = start + timedelta(days=7)
     return start, end
 
+def _month_bounds(offset: int):
+    now_vn = datetime.now(VN_TZ)
+    total_months = now_vn.year * 12 + (now_vn.month - 1) + offset
+    year = total_months // 12
+    month = total_months % 12 + 1
+    start = datetime(year, month, 1)
+    end = datetime(year + 1, 1, 1) if month == 12 else datetime(year, month + 1, 1)
+    return start, end
+
 @router.get("")
 def get_stats(user=Depends(verify_token)):
     res = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute()
@@ -52,14 +61,39 @@ def get_stats(user=Depends(verify_token)):
         "overdue": overdue,
     }
 
-# Tỉ lệ trạng thái task (Hoàn thành/Đang làm/Quá hạn) tính riêng cho 1 tuần hoặc 1 năm cụ thể,
+# Tóm tắt các mốc thời gian thực sự có dữ liệu (dựa trên deadline hoặc completed_at),
+# dùng để giới hạn danh sách năm/tháng/tuần chọn nhanh trong modal thống kê.
+@router.get("/activity-summary")
+def get_activity_summary(user=Depends(verify_token)):
+    res = supabase.table("tasks").select("deadline,completed_at").eq("user_id", user["id"]).execute()
+
+    days = set()
+    for t in res.data:
+        if t.get("deadline"):
+            days.add(_to_vn_naive(t["deadline"]).date().isoformat())
+        if t.get("completed_at"):
+            days.add(_to_vn_naive(t["completed_at"]).date().isoformat())
+
+    months = {d[:7] for d in days}
+    years = {int(d[:4]) for d in days}
+    current_year = datetime.now(VN_TZ).year
+
+    return {
+        "days": sorted(days),
+        "months": sorted(months),
+        "earliestYear": min(years) if years else current_year,
+    }
+
+# Tỉ lệ trạng thái task (Hoàn thành/Đang làm/Quá hạn) tính riêng cho 1 tuần, 1 tháng hoặc 1 năm cụ thể,
 # dựa trên deadline rơi vào đúng kỳ đó. "Quá hạn" vẫn so với thời điểm hiện tại (không phải theo kỳ đã qua).
 @router.get("/period-status")
 def get_period_status(range: str = "week", offset: int = 0, user=Depends(verify_token)):
-    if range == "month":
+    if range == "year":
         year = datetime.now(VN_TZ).year + offset
         start = datetime(year, 1, 1)
         end = datetime(year + 1, 1, 1)
+    elif range == "month":
+        start, end = _month_bounds(offset)
     else:
         start, end = _week_bounds(offset)
 
@@ -104,6 +138,24 @@ def get_completed_by_day(offset: int = 0, user=Depends(verify_token)):
             counts[day_index] += 1
 
     return {"counts": counts, "startDate": start_of_week.date().isoformat()}
+
+# Số task hoàn thành theo từng ngày trong 1 THÁNG cụ thể, dựa trên completed_at thật.
+# offset=0 là tháng hiện tại, offset=-1 là tháng trước, v.v.
+@router.get("/completed-by-month-days")
+def get_completed_by_month_days(offset: int = 0, user=Depends(verify_token)):
+    start, end = _month_bounds(offset)
+    days_in_month = (end - start).days
+
+    res = supabase.table("tasks").select("completed_at").eq("user_id", user["id"]).execute()
+    counts = [0] * days_in_month
+    for t in res.data:
+        if not t.get("completed_at"):
+            continue
+        dt = _to_vn_naive(t["completed_at"])
+        if start <= dt < end:
+            counts[dt.day - 1] += 1
+
+    return {"counts": counts, "year": start.year, "month": start.month}
 
 # Số task hoàn thành theo từng tháng trong 1 năm, kèm năm trước đó nếu có dữ liệu.
 # offset=0 là năm hiện tại, offset=-1 là năm trước, v.v.
