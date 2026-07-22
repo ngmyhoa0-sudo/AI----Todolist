@@ -6,7 +6,6 @@ import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.chat import ChatCreate, ParseTaskRequest
 from app.database import supabase
@@ -62,7 +61,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
         f'{"Người dùng" if h["role"] == "user" else "AI"}: {h["content"]}' for h in recent_history
     ) or "(chưa có hội thoại trước đó)"
 
-    now_vn = datetime.now(VN_TZ)
+    now_vn = datetime.now(ZoneInfo(user["timezone"]))
     today_str = now_vn.strftime("%Y-%m-%d")
     tomorrow_str = (now_vn + timedelta(days=1)).strftime("%Y-%m-%d")
     day_after_tomorrow_str = (now_vn + timedelta(days=2)).strftime("%Y-%m-%d")

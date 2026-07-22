@@ -4,35 +4,31 @@ from app.dependencies import verify_token
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
-
 router = APIRouter(prefix="/stats", tags=["stats"])
 
-def _is_overdue(deadline_str: str) -> bool:
+def _is_overdue(deadline_str: str, tz) -> bool:
     deadline_dt = datetime.fromisoformat(deadline_str)
     if deadline_dt.tzinfo is not None:
-        # Chuẩn hóa về naive datetime để so sánh cùng "múi giờ" với datetime.now()
         deadline_dt = deadline_dt.replace(tzinfo=None)
-    return deadline_dt < datetime.now(VN_TZ).replace(tzinfo=None)
+    return deadline_dt < datetime.now(tz).replace(tzinfo=None)
 
-def _to_vn_naive(dt_str: str) -> datetime:
+def _to_naive(dt_str: str, tz) -> datetime:
     dt = datetime.fromisoformat(dt_str)
     if dt.tzinfo is not None:
-        dt = dt.astimezone(VN_TZ).replace(tzinfo=None)
+        dt = dt.astimezone(tz).replace(tzinfo=None)
     return dt
 
-def _week_bounds(offset: int):
-    now_vn = datetime.now(VN_TZ).replace(tzinfo=None)
-    # Python: Thứ 2=0 ... Chủ nhật=6 -> quy đổi sang CN=0 ... T7=6 cho khớp cách hiển thị của app
-    today_index = (now_vn.weekday() + 1) % 7
-    start_of_this_week = (now_vn - timedelta(days=today_index)).replace(hour=0, minute=0, second=0, microsecond=0)
+def _week_bounds(offset: int, tz):
+    now = datetime.now(tz).replace(tzinfo=None)
+    today_index = (now.weekday() + 1) % 7
+    start_of_this_week = (now - timedelta(days=today_index)).replace(hour=0, minute=0, second=0, microsecond=0)
     start = start_of_this_week + timedelta(weeks=offset)
     end = start + timedelta(days=7)
     return start, end
 
-def _month_bounds(offset: int):
-    now_vn = datetime.now(VN_TZ)
-    total_months = now_vn.year * 12 + (now_vn.month - 1) + offset
+def _month_bounds(offset: int, tz):
+    now = datetime.now(tz)
+    total_months = now.year * 12 + (now.month - 1) + offset
     year = total_months // 12
     month = total_months % 12 + 1
     start = datetime(year, month, 1)
@@ -41,6 +37,7 @@ def _month_bounds(offset: int):
 
 @router.get("")
 def get_stats(user=Depends(verify_token)):
+    tz = ZoneInfo(user["timezone"])
     res = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute()
     tasks = res.data
 
@@ -50,7 +47,7 @@ def get_stats(user=Depends(verify_token)):
         t for t in tasks
         if not t["is_completed"]
         and t["deadline"]
-        and _is_overdue(t["deadline"])
+        and _is_overdue(t["deadline"], tz)
     ])
     active = total - completed - overdue
 
@@ -65,18 +62,19 @@ def get_stats(user=Depends(verify_token)):
 # dùng để giới hạn danh sách năm/tháng/tuần chọn nhanh trong modal thống kê.
 @router.get("/activity-summary")
 def get_activity_summary(user=Depends(verify_token)):
+    tz = ZoneInfo(user["timezone"])
     res = supabase.table("tasks").select("deadline,completed_at").eq("user_id", user["id"]).execute()
 
     days = set()
     for t in res.data:
         if t.get("deadline"):
-            days.add(_to_vn_naive(t["deadline"]).date().isoformat())
+            days.add(_to_naive(t["deadline"], tz).date().isoformat())
         if t.get("completed_at"):
-            days.add(_to_vn_naive(t["completed_at"]).date().isoformat())
+            days.add(_to_naive(t["completed_at"], tz).date().isoformat())
 
     months = {d[:7] for d in days}
     years = {int(d[:4]) for d in days}
-    current_year = datetime.now(VN_TZ).year
+    current_year = datetime.now(tz).year
 
     return {
         "days": sorted(days),
@@ -88,14 +86,15 @@ def get_activity_summary(user=Depends(verify_token)):
 # dựa trên deadline rơi vào đúng kỳ đó. "Quá hạn" vẫn so với thời điểm hiện tại (không phải theo kỳ đã qua).
 @router.get("/period-status")
 def get_period_status(range: str = "week", offset: int = 0, user=Depends(verify_token)):
+    tz = ZoneInfo(user["timezone"])
     if range == "year":
-        year = datetime.now(VN_TZ).year + offset
+        year = datetime.now(tz).year + offset
         start = datetime(year, 1, 1)
         end = datetime(year + 1, 1, 1)
     elif range == "month":
-        start, end = _month_bounds(offset)
+        start, end = _month_bounds(offset, tz)
     else:
-        start, end = _week_bounds(offset)
+        start, end = _week_bounds(offset, tz)
 
     res = supabase.table("tasks").select("is_completed,deadline").eq("user_id", user["id"]).execute()
 
@@ -103,12 +102,12 @@ def get_period_status(range: str = "week", offset: int = 0, user=Depends(verify_
     for t in res.data:
         if not t["deadline"]:
             continue
-        dt = _to_vn_naive(t["deadline"])
+        dt = _to_naive(t["deadline"], tz)
         if not (start <= dt < end):
             continue
         if t["is_completed"]:
             completed += 1
-        elif _is_overdue(t["deadline"]):
+        elif _is_overdue(t["deadline"], tz):
             overdue += 1
         else:
             active += 1
@@ -125,14 +124,15 @@ def get_period_status(range: str = "week", offset: int = 0, user=Depends(verify_
 # offset=0 là tuần hiện tại, offset=-1 là tuần trước, v.v.
 @router.get("/completed-by-day")
 def get_completed_by_day(offset: int = 0, user=Depends(verify_token)):
-    start_of_week, end_of_week = _week_bounds(offset)
+    tz = ZoneInfo(user["timezone"])
+    start_of_week, end_of_week = _week_bounds(offset, tz)
 
     res = supabase.table("tasks").select("completed_at").eq("user_id", user["id"]).execute()
     counts = [0] * 7
     for t in res.data:
         if not t.get("completed_at"):
             continue
-        dt = _to_vn_naive(t["completed_at"])
+        dt = _to_naive(t["completed_at"], tz)
         if start_of_week <= dt < end_of_week:
             day_index = (dt.weekday() + 1) % 7
             counts[day_index] += 1
@@ -143,7 +143,8 @@ def get_completed_by_day(offset: int = 0, user=Depends(verify_token)):
 # offset=0 là tháng hiện tại, offset=-1 là tháng trước, v.v.
 @router.get("/completed-by-month-days")
 def get_completed_by_month_days(offset: int = 0, user=Depends(verify_token)):
-    start, end = _month_bounds(offset)
+    tz = ZoneInfo(user["timezone"])
+    start, end = _month_bounds(offset, tz)
     days_in_month = (end - start).days
 
     res = supabase.table("tasks").select("completed_at").eq("user_id", user["id"]).execute()
@@ -151,7 +152,7 @@ def get_completed_by_month_days(offset: int = 0, user=Depends(verify_token)):
     for t in res.data:
         if not t.get("completed_at"):
             continue
-        dt = _to_vn_naive(t["completed_at"])
+        dt = _to_naive(t["completed_at"], tz)
         if start <= dt < end:
             counts[dt.day - 1] += 1
 
@@ -161,7 +162,8 @@ def get_completed_by_month_days(offset: int = 0, user=Depends(verify_token)):
 # offset=0 là năm hiện tại, offset=-1 là năm trước, v.v.
 @router.get("/completed-by-month")
 def get_completed_by_month(offset: int = 0, user=Depends(verify_token)):
-    current_year = datetime.now(VN_TZ).year + offset
+    tz = ZoneInfo(user["timezone"])
+    current_year = datetime.now(tz).year + offset
     prev_year = current_year - 1
 
     res = supabase.table("tasks").select("completed_at").eq("user_id", user["id"]).execute()
@@ -170,7 +172,7 @@ def get_completed_by_month(offset: int = 0, user=Depends(verify_token)):
     for t in res.data:
         if not t.get("completed_at"):
             continue
-        dt = _to_vn_naive(t["completed_at"])
+        dt = _to_naive(t["completed_at"], tz)
         if dt.year == current_year:
             current_counts[dt.month - 1] += 1
         elif dt.year == prev_year:

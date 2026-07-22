@@ -13,6 +13,7 @@ const translations = {
         accountTitle: "Tài khoản",
         logout: "Đăng xuất",
         languageLabel: "Ngôn ngữ",
+        timezoneLabel: "Múi giờ",
 
         // Đăng nhập / Đăng ký
         loginTagline: "Quản lý công việc thông minh hơn",
@@ -104,6 +105,7 @@ const translations = {
         activeTasks: "Đang làm",
         overdueTasks: "Quá hạn",
         loadingStats: "Đang tải thống kê...",
+        loadingChart: "Đang tải biểu đồ...",
         completedTasksChartTitle: "Task hoàn thành",
         weekRange: "Tuần",
         monthRange: "Tháng",
@@ -144,6 +146,7 @@ const translations = {
         accountTitle: "Account",
         logout: "Log out",
         languageLabel: "Language",
+        timezoneLabel: "Time zone",
 
         loginTagline: "Manage your tasks smarter",
         loginTab: "Log In",
@@ -229,6 +232,7 @@ const translations = {
         activeTasks: "In progress",
         overdueTasks: "Overdue",
         loadingStats: "Loading stats...",
+        loadingChart: "Loading chart...",
         completedTasksChartTitle: "Completed tasks",
         weekRange: "Week",
         monthRange: "Month",

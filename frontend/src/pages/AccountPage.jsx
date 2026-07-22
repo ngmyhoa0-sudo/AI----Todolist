@@ -1,14 +1,41 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as authService from "../services/authService";
+import * as settingsService from "../services/settingsService";
 import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
 import { THEMES } from "../theme";
+
+const TIMEZONES = [
+    { value: "Asia/Ho_Chi_Minh", label: "Vietnam (GMT+7)" },
+    { value: "Asia/Bangkok", label: "Thailand (GMT+7)" },
+    { value: "Asia/Shanghai", label: "China (GMT+8)" },
+    { value: "Asia/Tokyo", label: "Japan (GMT+9)" },
+    { value: "Asia/Seoul", label: "South Korea (GMT+9)" },
+    { value: "Asia/Kolkata", label: "India (GMT+5:30)" },
+    { value: "Asia/Dubai", label: "UAE (GMT+4)" },
+    { value: "Europe/London", label: "United Kingdom (GMT+0/+1)" },
+    { value: "Europe/Paris", label: "France (GMT+1/+2)" },
+    { value: "Europe/Moscow", label: "Russia (GMT+3)" },
+    { value: "America/New_York", label: "US - Eastern (GMT-5/-4)" },
+    { value: "America/Chicago", label: "US - Central (GMT-6/-5)" },
+    { value: "America/Los_Angeles", label: "US - Pacific (GMT-8/-7)" },
+    { value: "Australia/Sydney", label: "Australia (GMT+10/+11)" },
+    { value: "UTC", label: "UTC" },
+];
 
 export default function AccountPage() {
     const navigate = useNavigate();
     const { language, setLanguage, t } = useLanguage();
     const { theme, toggleTheme } = useTheme();
     const colors = THEMES[theme];
+    const [timezone, setTimezone] = useState("Asia/Ho_Chi_Minh");
+
+    useEffect(() => {
+        settingsService.getTimezone()
+            .then((res) => setTimezone(res.data.timezone))
+            .catch(() => { });
+    }, []);
 
     const handleLogout = () => {
         authService.logout();
@@ -17,6 +44,16 @@ export default function AccountPage() {
 
     const toggleLanguage = () => {
         setLanguage(language === "vi" ? "en" : "vi");
+    };
+
+    const handleTimezoneChange = async (e) => {
+        const newTz = e.target.value;
+        setTimezone(newTz);
+        try {
+            await settingsService.updateTimezone(newTz);
+        } catch {
+            // Không lưu được thì thôi, giữ giá trị trên UI, thử lại lần sau khi vào lại trang
+        }
     };
 
     return (
@@ -79,6 +116,28 @@ export default function AccountPage() {
                     <span style={styles.chevron}>›</span>
                 </button>
 
+                <div style={{ ...styles.row, borderBottom: `1px solid ${colors.border}`, cursor: "default" }}>
+                    <span style={styles.iconBox}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                    </span>
+                    <span style={styles.rowText}>
+                        <span style={{ ...styles.rowLabel, color: colors.text }}>{t("timezoneLabel")}</span>
+                    </span>
+                    <select
+                        value={timezone}
+                        onChange={handleTimezoneChange}
+                        style={{ ...styles.timezoneSelect, color: colors.textMuted }}
+                    >
+                        {TIMEZONES.map((tz) => (
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
+                        ))}
+                    </select>
+                    <span style={styles.chevron}>›</span>
+                </div>
+
                 <button
                     type="button"
                     style={{ ...styles.row, borderBottom: "none" }}
@@ -119,12 +178,13 @@ const styles = {
         display: "flex",
         alignItems: "center",
         width: "100%",
-        padding: "14px 16px",
+        padding: "15px 16px",
         background: "none",
         border: "none",
         cursor: "pointer",
         textAlign: "left",
         gap: "12px",
+        fontFamily: "inherit",
     },
     iconBox: {
         display: "flex",
@@ -150,5 +210,17 @@ const styles = {
     chevron: {
         fontSize: "18px",
         color: "#ccc",
+    },
+    timezoneSelect: {
+        fontSize: "13px",
+        border: "none",
+        background: "none",
+        outline: "none",
+        cursor: "pointer",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none",
+        textAlign: "right",
+        padding: 0,
     },
 };
