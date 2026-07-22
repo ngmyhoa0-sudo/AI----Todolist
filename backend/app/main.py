@@ -1,7 +1,7 @@
 from fastapi.security import HTTPBearer
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import todo, auth, ai, chat_history, stats
+from app.routers import todo, auth, ai, chat_history, stats, settings
 
 security = HTTPBearer()
 
@@ -33,3 +33,4 @@ app.include_router(auth.router)
 app.include_router(ai.router)
 app.include_router(chat_history.router)
 app.include_router(stats.router)
+app.include_router(settings.router)
