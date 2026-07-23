@@ -126,7 +126,7 @@ export default function ChatPanel({ children }) {
     return (
         <>
             <div ref={containerRef} style={styles.splitContainer}>
-                <div style={styles.mainPane}>{children}</div>
+                <div style={styles.mainPane} className="app-scroll-thin">{children}</div>
 
                 {isDesktop && open && (
                     <>
