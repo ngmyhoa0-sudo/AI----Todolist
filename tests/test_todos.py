@@ -123,6 +123,9 @@ def test_tc_todo_10_update_doi_ten_thanh_cong(client, mock_supabase):
 
 
 def test_tc_todo_11_update_danh_dau_hoan_thanh(client, mock_supabase):
+    select_chain = mock_supabase.table.return_value.select.return_value.eq.return_value.eq.return_value
+    select_chain.execute.return_value = SimpleNamespace(data=[])
+
     chain = mock_supabase.table.return_value.update.return_value.eq.return_value.eq.return_value
     chain.execute.return_value = SimpleNamespace(data=[{"id": 1, "is_completed": True}])
     res = client.put("/todos/1", json={"is_completed": True}, headers=AUTH_HEADERS)
