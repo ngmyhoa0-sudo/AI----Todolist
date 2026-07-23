@@ -1,3 +1,30 @@
-git add .github/workflows/test.yml
-git commit -m "Thêm CI: tự động chạy test khi push/tạo PR"
-git push -u origin add-ci-cd
+name: Backend Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://dummy.supabase.co
+      SUPABASE_KEY: dummy-key-for-ci
+      GROQ_API_KEY: dummy-key-for-ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -v
