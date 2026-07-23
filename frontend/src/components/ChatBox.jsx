@@ -163,7 +163,7 @@ export default function ChatBox({ fillHeight = false }) {
         <div style={styles.wrapper}>
             <div style={styles.header}>{t("aiAssistant")}</div>
 
-            <div style={styles.messages}>
+            <div style={styles.messages} className="app-scroll-thin">
                 {messages.length === 0 && !loading && (
                     <p style={styles.empty}>{t("askAiPlaceholder")}</p>
                 )}
