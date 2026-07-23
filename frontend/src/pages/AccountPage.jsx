@@ -202,7 +202,7 @@ const styles = {
     },
     rowLabel: {
         fontSize: "14px",
-        fontWeight: "500",
+        fontWeight: "450",
     },
     rowValue: {
         fontSize: "13px",
@@ -213,6 +213,8 @@ const styles = {
     },
     timezoneSelect: {
         fontSize: "13px",
+        fontFamily: "inherit",
+        fontWeight: "inherit",
         border: "none",
         background: "none",
         outline: "none",

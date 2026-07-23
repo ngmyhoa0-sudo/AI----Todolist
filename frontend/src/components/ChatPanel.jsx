@@ -1,17 +1,59 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import ChatBox from "./ChatBox";
 import useTransparentIcon from "../hooks/useTransparentIcon";
+import useIsDesktop from "../hooks/useIsDesktop";
 import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
 import { THEMES } from "../theme";
 
-// ChatPanel chỉ làm 1 việc: hiện icon nổi, bấm vào mở panel chat trượt từ bên phải
-export default function ChatPanel() {
+const DEFAULT_CHAT_WIDTH = 380;
+const MIN_CHAT_WIDTH = 300;
+const MIN_MAIN_WIDTH = 360;
+
+// Mobile: giữ nguyên fab + overlay trượt từ phải như cũ.
+// Desktop: khi mở, chia màn hình thành 2 cột (nội dung trái lớn hơn, chat phải),
+// có thanh chia kéo được để đổi diện tích.
+export default function ChatPanel({ children }) {
     const [open, setOpen] = useState(false);
+    const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH);
+    const isDraggingRef = useRef(false);
+    const containerRef = useRef(null);
+
+    const isDesktop = useIsDesktop();
     const transparentIcon = useTransparentIcon("/chat-icon.png");
     const { t } = useLanguage();
     const { theme } = useTheme();
     const colors = THEMES[theme];
+
+    const handleDividerMouseDown = (e) => {
+        e.preventDefault();
+        isDraggingRef.current = true;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isDraggingRef.current || !containerRef.current) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            const maxChatWidth = rect.width - MIN_MAIN_WIDTH;
+            let newWidth = rect.right - e.clientX;
+            newWidth = Math.max(MIN_CHAT_WIDTH, Math.min(newWidth, maxChatWidth));
+            setChatWidth(newWidth);
+        };
+        const handleMouseUp = () => {
+            if (!isDraggingRef.current) return;
+            isDraggingRef.current = false;
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+        };
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, []);
 
     const styles = {
         fab: {
@@ -40,7 +82,7 @@ export default function ChatPanel() {
             display: "flex",
             justifyContent: "flex-end",
         },
-        panel: {
+        mobilePanel: {
             width: "380px",
             maxWidth: "100vw",
             height: "100vh",
@@ -52,10 +94,50 @@ export default function ChatPanel() {
             overflowY: "auto",
             boxSizing: "border-box",
         },
+        splitContainer: {
+            display: "flex",
+            alignItems: "stretch",
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+        },
+        mainPane: {
+            flex: 1,
+            minWidth: 0,
+            height: "100%",
+            overflowY: "auto",
+        },
+        divider: {
+            width: "5px",
+            flexShrink: 0,
+            cursor: "col-resize",
+            backgroundColor: "transparent",
+        },
+        chatPane: {
+            flexShrink: 0,
+            boxSizing: "border-box",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+        },
     };
 
     return (
         <>
+            <div ref={containerRef} style={styles.splitContainer}>
+                <div style={styles.mainPane}>{children}</div>
+
+                {isDesktop && open && (
+                    <>
+                        <div style={styles.divider} onMouseDown={handleDividerMouseDown} />
+                        <div style={{ ...styles.chatPane, width: chatWidth }}>
+                            <ChatBox fillHeight />
+                        </div>
+                    </>
+                )}
+            </div>
+
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
@@ -72,9 +154,9 @@ export default function ChatPanel() {
                 )}
             </button>
 
-            {open && (
+            {!isDesktop && open && (
                 <div style={styles.overlay} onClick={() => setOpen(false)}>
-                    <div style={styles.panel} onClick={(e) => e.stopPropagation()}>
+                    <div style={styles.mobilePanel} onClick={(e) => e.stopPropagation()}>
                         <ChatBox />
                     </div>
                 </div>

@@ -1,0 +1,17 @@
+import { useState, useEffect } from "react";
+
+// Trả về true nếu màn hình rộng hơn breakpoint (mặc định 900px = ranh giới desktop/mobile)
+export default function useIsDesktop(breakpoint = 900) {
+    const [isDesktop, setIsDesktop] = useState(
+        () => typeof window !== "undefined" && window.innerWidth >= breakpoint
+    );
+
+    useEffect(() => {
+        const mql = window.matchMedia(`(min-width: ${breakpoint}px)`);
+        const handler = (e) => setIsDesktop(e.matches);
+        mql.addEventListener("change", handler);
+        return () => mql.removeEventListener("change", handler);
+    }, [breakpoint]);
+
+    return isDesktop;
+}
