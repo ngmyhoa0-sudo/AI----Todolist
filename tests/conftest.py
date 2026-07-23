@@ -33,7 +33,7 @@ def client(mock_supabase, monkeypatch):
     from app.main import app
 
     def fake_verify_token():
-        return {"id": "test-user-id", "email": "test@example.com"}
+        return {"id": "test-user-id", "email": "test@example.com", "timezone": "Asia/Ho_Chi_Minh"}
 
     app.dependency_overrides[deps.verify_token] = fake_verify_token
 
