@@ -68,21 +68,25 @@ export default function AppLayout() {
                 </div>
             </nav>
 
-            <div style={styles.content}>
-                <Outlet />
-            </div>
-
-            <ChatPanel />
+            <ChatPanel>
+                <div style={styles.content}>
+                    <Outlet />
+                </div>
+            </ChatPanel>
         </div>
     );
 }
 
 const styles = {
     page: {
-        minHeight: "100vh",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
     },
     nav: {
+        flexShrink: 0,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",

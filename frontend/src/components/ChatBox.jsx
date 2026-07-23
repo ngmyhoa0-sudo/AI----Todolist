@@ -8,7 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 import { THEMES } from "../theme";
 
 // ChatBox chỉ làm 1 việc: giao diện chatbot AI, tự gọi aiService
-export default function ChatBox() {
+export default function ChatBox({ fillHeight = false }) {
     const { bump } = useTaskRefresh();
     const { t } = useLanguage();
     const { theme } = useTheme();
@@ -76,8 +76,9 @@ export default function ChatBox() {
             border: `1px solid ${colors.border}`,
             borderRadius: "10px",
             overflow: "hidden",
-            marginBottom: "20px",
+            marginBottom: fillHeight ? 0 : "20px",
             fontFamily: "'Inter', 'Segoe UI', sans-serif",
+            ...(fillHeight ? { height: "100%" } : {}),
         },
         header: {
             padding: "12px 14px",
@@ -91,8 +92,8 @@ export default function ChatBox() {
             flexDirection: "column",
             gap: "8px",
             padding: "14px",
-            maxHeight: "320px",
             overflowY: "auto",
+            ...(fillHeight ? { flex: 1 } : { maxHeight: "320px" }),
         },
         empty: {
             textAlign: "center",
