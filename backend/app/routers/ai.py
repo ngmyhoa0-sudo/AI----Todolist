@@ -55,7 +55,7 @@ def chat_with_ai(chat: ChatCreate, user=Depends(verify_token)):
     tasks = supabase.table("tasks").select("*").eq("user_id", user["id"]).execute().data
 
     history_res = supabase.table("chat_history").select("role,content") \
-        .eq("user_id", user["id"]).order("created_at", desc=True).limit(10).execute()
+        .eq("user_id", user["id"]).order("id", desc=True).limit(10).execute()
     recent_history = list(reversed(history_res.data)) if history_res.data else []
     history_text = "\n".join(
         f'{"Người dùng" if h["role"] == "user" else "AI"}: {h["content"]}' for h in recent_history
